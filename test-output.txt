@@ -1,0 +1,48 @@
+◇ injected env (26) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+(node:19275) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ERROR:
+PrismaClientValidationError: 
+Invalid `prisma.tenant.create()` invocation in
+/home/ale/Documentos/PROYECTOS/ECOMMERCE- L/Super-Ecommerce-Api/src/services/saas.service.js:61:40
+
+  58 const existing = await prisma.tenant.findUnique({ where: { slug } });
+  59 if (existing) throw { statusCode: 400, message: 'Ya existe un negocio con ese slug.' };
+  60 
+→ 61 const tenant = await prisma.tenant.create({
+       data: {
+         name: "Test Tenant 123",
+         slug: "test-tenant-123",
+         ownerName: "Alejandro",
+         ownerEmail: "ale@test.com",
+         ownerPhone: null,
+         domain: null,
+         planId: 1,
+         monthlyPrice: 5000,
+         subscriptionEnd: "2026-06-25",
+                          ~~~~~~~~~~~~
+         notes: null
+       },
+       include: {
+         plan: true
+       }
+     })
+
+Invalid value for argument `subscriptionEnd`: premature end of input. Expected ISO-8601 DateTime.
+    at ar (/home/ale/Documentos/PROYECTOS/ECOMMERCE- L/Super-Ecommerce-Api/node_modules/@prisma/client/runtime/client.js:10:1379)
+    at zr.handleRequestError (/home/ale/Documentos/PROYECTOS/ECOMMERCE- L/Super-Ecommerce-Api/node_modules/@prisma/client/runtime/client.js:65:7929)
+    at zr.handleAndLogRequestError (/home/ale/Documentos/PROYECTOS/ECOMMERCE- L/Super-Ecommerce-Api/node_modules/@prisma/client/runtime/client.js:65:7581)
+    at zr.request (/home/ale/Documentos/PROYECTOS/ECOMMERCE- L/Super-Ecommerce-Api/node_modules/@prisma/client/runtime/client.js:65:7288)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async a (/home/ale/Documentos/PROYECTOS/ECOMMERCE- L/Super-Ecommerce-Api/node_modules/@prisma/client/runtime/client.js:75:5816)
+    at async SaaSService.createTenant (/home/ale/Documentos/PROYECTOS/ECOMMERCE- L/Super-Ecommerce-Api/src/services/saas.service.js:61:20)
+    at async test (/home/ale/Documentos/PROYECTOS/ECOMMERCE- L/Super-Ecommerce-Api/test-create.js:18:17) {
+  clientVersion: '7.4.1'
+}

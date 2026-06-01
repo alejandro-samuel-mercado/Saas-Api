@@ -1,0 +1,191 @@
+const socketIo = require('socket.io');
+const chatService = require('./services/chat.service');
+const chatInventoryService = require('./services/chat-inventory.service');
+const jwt = require('jsonwebtoken');
+
+let io;
+
+const initSocket = (server) => {
+  io = socketIo(server, {
+    cors: {
+      origin: "*", 
+      methods: ["GET", "POST"]
+    }
+  });
+
+  io.on('connection', async (socket) => {
+    
+    const token = socket.handshake.auth.token;
+    const tenantId = socket.handshake.query?.tenantId || socket.handshake.headers['x-tenant-id'] || 'default';
+    const tenantContext = require('./utils/async-context');
+
+    let userId = null;
+    let role = null;
+
+    // Verificar Token manualmente ya que es conexión WS
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        userId = decoded.id;
+        role = decoded.role;
+      } catch (err) {
+      }
+    }
+
+    // Unir a salas basado en rol, per tenant
+    if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+      socket.join(`admins_${tenantId}`);
+    } 
+
+    socket.on('join_conversation', async ({ conversationId }) => {
+       if(role === 'ADMIN' || role === 'SUPER_ADMIN') {
+           socket.join(`conversation_${tenantId}_${conversationId}`);
+       }
+    });
+
+    // Cliente inicia chat o envía mensaje
+    socket.on('client_message', async ({ text }) => {
+      tenantContext.run(tenantId, async () => {
+        try {
+          const conversation = await chatService.getOrCreateConversation(userId, socket.id);
+          const roomId = `conversation_${tenantId}_${conversation.id}`;
+          socket.join(roomId);
+
+          await chatService.addMessage(conversation.id, 'USER', text);
+
+          const adminSockets = await io.in(`admins_${tenantId}`).fetchSockets();
+          const adminsOnline = adminSockets.length > 0;
+
+          io.to(`admins_${tenantId}`).emit('admin_notification', {
+             type: 'new_message',
+             conversationId: conversation.id,
+             text,
+             user: userId ? { id: userId } : { name: 'Invitado', email: 'Sin registrar' }
+          });
+
+          socket.to(roomId).emit('message_received', {
+            sender: 'USER',
+            text,
+            createdAt: new Date()
+        });
+
+        const inventoryReply = await chatInventoryService.getInventoryResponse(text);
+        if (inventoryReply) {
+           await chatService.addMessage(conversation.id, 'BOT', inventoryReply);
+           socket.emit('message_received', {
+             conversationId: conversation.id,
+             sender: 'BOT',
+             text: inventoryReply,
+             createdAt: new Date()
+           });
+        } else {
+           const autoReply = await chatService.getAutoResponse(text);
+           if (autoReply) {
+             await chatService.addMessage(conversation.id, 'BOT', autoReply);
+             socket.emit('message_received', {
+               conversationId: conversation.id,
+               sender: 'BOT',
+               text: autoReply,
+               createdAt: new Date()
+             });
+           } else {
+             const fallback = adminsOnline
+               ? "Disculpa, no tengo una respuesta exacta para eso, pero un agente está en línea y te atenderá en breve."
+               : "Disculpa, no tengo una respuesta para eso. Te pondremos en contacto con un agente lo antes posible. Por favor, dejanos tu consulta y te responderemos a la brevedad.";
+             await chatService.addMessage(conversation.id, 'BOT', fallback);
+             socket.emit('message_received', {
+                conversationId: conversation.id,
+                sender: 'BOT',
+                text: fallback,
+                createdAt: new Date()
+             });
+           }
+         }
+        } catch (error) {
+           console.error('[Socket] client_message error:', error);
+        }
+      });
+    });
+
+    socket.on('typing', ({ conversationId }) => {
+        socket.to(`conversation_${tenantId}_${conversationId}`).emit('display_typing', { sender: role === 'ADMIN' ? 'ADMIN' : 'USER' });
+    });
+
+    socket.on('stop_typing', ({ conversationId }) => {
+        socket.to(`conversation_${tenantId}_${conversationId}`).emit('hide_typing', { sender: role === 'ADMIN' ? 'ADMIN' : 'USER' });
+    });
+
+    socket.on('resume_chat', async ({ conversationId }) => {
+      tenantContext.run(tenantId, async () => {
+        try {
+            const conversation = await chatService.getConversationById(conversationId);
+            if (!conversation || conversation.closed) {
+                return socket.emit('chat_history', { conversationId: null, messages: [] });
+            }
+
+            const isOwner = userId 
+                ? conversation.userId === userId 
+                : conversation.socketId === socket.id;
+
+            if (isOwner || role === 'ADMIN' || role === 'SUPER_ADMIN') {
+                await chatService.joinGuestConversation(conversationId, socket.id);
+                const roomName = `conversation_${tenantId}_${conversation.id}`;
+                socket.join(roomName);
+                
+                const history = conversation.messages.map(m => ({
+                    text: m.content,
+                    sender: m.sender,
+                    createdAt: m.createdAt
+                }));
+                
+                socket.emit('chat_history', { conversationId: conversation.id, messages: history });
+            } else {
+                socket.emit('chat_history', { conversationId: null, messages: [] });
+            }
+        } catch (error) {
+           console.error('[Socket] resume_chat error:', error);
+        }
+      });
+    });
+
+    socket.on('admin_message', async ({ conversationId, text }) => {
+      if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') return;
+      
+      tenantContext.run(tenantId, async () => {
+        try {
+          await chatService.addMessage(conversationId, 'ADMIN', text);
+          
+          const roomName = `conversation_${tenantId}_${conversationId}`;
+        const room = io.sockets.adapter.rooms.get(roomName);
+
+        // Broadcast a todos en la sala (El Usuario + Otros Admins)
+        io.to(roomName).emit('message_received', {
+            sender: 'ADMIN',
+            text,
+            createdAt: new Date()
+        });
+
+        } catch (error) {
+            console.error('[Socket] admin_message error:', error);
+        }
+      });
+    });
+
+    socket.on('mark_read', ({ conversationId }) => {
+      if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') return;
+      io.to(`admins_${tenantId}`).emit('mark_read', { conversationId });
+    });
+
+    socket.on('disconnect', () => {
+    });
+  });
+};
+
+const getIo = () => {
+  if (!io) {
+    throw new Error('Socket.io not initialized!');
+  }
+  return io;
+};
+
+module.exports = { initSocket, getIo };

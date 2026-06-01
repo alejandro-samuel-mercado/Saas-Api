@@ -1,0 +1,81 @@
+const ShippingService = require('../services/shipping.service');
+
+
+const getZones = async (req, res) => {
+    try {
+        const { search, page, limit } = req.query;
+        const result = await ShippingService.getAllZones({ search, page, limit });
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const createZone = async (req, res) => {
+    try {
+        const zone = await ShippingService.createZone(req.body);
+        res.json(zone);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+const updateZone = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const zone = await ShippingService.updateZone(id, req.body);
+        res.json(zone);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+const deleteZone = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await ShippingService.deleteZone(id);
+        res.json({ message: 'Zone deleted' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const calculateCost = async (req, res) => {
+    try {
+        const { country, province, city, subtotal } = req.body;
+        const addressData = { country, province, city };
+        const currency = req.headers['x-currency'] || req.query.currency;
+        
+        const cost = await ShippingService.calculateShippingCost(addressData, 'DOMICILIO', currency, subtotal);
+        
+        res.json({ cost, success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const getAvailableZones = async (req, res) => {
+    try {
+        // Para el selector público, traemos todas las activas sin paginar por ahora
+        const result = await ShippingService.getAllZones({ limit: 1000 });
+        const available = result.data.filter(z => z.active).map(z => ({
+            id: z.id,
+            country: z.country,
+            province: z.province,
+            city: z.city,
+            cost: z.cost
+        }));
+        res.json(available);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+module.exports = {
+    getZones,
+    createZone,
+    updateZone,
+    deleteZone,
+    calculateCost,
+    getAvailableZones
+};

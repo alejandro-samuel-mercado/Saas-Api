@@ -1,0 +1,59 @@
+const express = require('express');
+const router = express.Router();
+const StockTransferController = require('../controllers/stock-transfer.controller');
+const { protect, restrictTo } = require('../middlewares/auth.middleware');
+
+// Rutas protegidas para administración de inventario
+router.use(protect);
+router.use(restrictTo('ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'));
+
+/**
+ * @route GET /api/stock-transfers
+ * @desc Obtener lista de transferencias de inventario
+ * @access Privado
+ */
+router.get('/', StockTransferController.getAll);
+
+/**
+ * @route GET /api/stock-transfers/:id
+ * @desc Obtener detalles de una transferencia de inventario
+ * @access Privado
+ */
+router.get('/:id', StockTransferController.getOne);
+
+/**
+ * @route POST /api/stock-transfers
+ * @desc Crear una nueva transferencia de inventario
+ * @access Admin
+ */
+router.post('/', restrictTo(['ADMIN', 'SUPER_ADMIN']), StockTransferController.create);
+
+/**
+ * @route PUT /api/stock-transfers/:id/ship
+ * @desc Marcar transferencia como enviada
+ * @access Admin
+ */
+router.put('/:id/ship', restrictTo(['ADMIN', 'SUPER_ADMIN']), StockTransferController.ship);
+
+/**
+ * @route PUT /api/stock-transfers/:id/receive
+ * @desc Marcar transferencia como recibida y actualizar stock en destino
+ * @access Admin
+ */
+router.put('/:id/receive', restrictTo(['ADMIN', 'SUPER_ADMIN']), StockTransferController.receive);
+
+/**
+ * @route PUT /api/stock-transfers/:id/cancel
+ * @desc Cancelar una transferencia de inventario
+ * @access Admin/Super Admin
+ */
+router.put('/:id/cancel', restrictTo('ADMIN', 'SUPER_ADMIN'), StockTransferController.cancel);
+
+/**
+ * @route GET /api/stock-transfers/:id/pdf
+ * @desc Descargar PDF de transferencia
+ * @access Privado
+ */
+router.get('/:id/pdf', StockTransferController.downloadPdf);
+
+module.exports = router;
