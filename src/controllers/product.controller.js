@@ -18,7 +18,7 @@ class ProductController {
   async create(req, res, next) {
     try {
       const branchId = req.branchId;
-      const product = await ProductService.createProduct({ ...req.body, adminId: req.user.id, ip: req.ip, branchId });
+      const product = await ProductService.createProduct({ ...req.body, adminId: req.user.id, ip: req.ip, branchId, rubroId: req.tenant?.rubroId });
       res.status(201).json({ success: true, message: 'Producto creado exitosamente', data: product });
     } catch (error) {
       if (error.code === 'P2002') {
@@ -31,7 +31,7 @@ class ProductController {
   async getAll(req, res, next) {
     try {
       const currency = req.headers['x-currency'] || req.query.currency;
-      const products = await ProductService.getProducts({ ...req.query, currency, branchId: req.branchId });
+      const products = await ProductService.getProducts({ ...req.query, currency, branchId: req.branchId, rubroId: req.tenant?.rubroId });
       const mappedProducts = { 
         ...products, 
         data: products.data.map(p => mapProductUrls(p, req)) 
@@ -67,7 +67,7 @@ class ProductController {
       }
       
  
-      const result = await ProductService.getProducts({ search: q, currency, branchId: req.branchId, ...req.query });
+      const result = await ProductService.getProducts({ search: q, currency, branchId: req.branchId, rubroId: req.tenant?.rubroId, ...req.query });
       const mappedResult = {
         ...result,
         data: result.data.map(p => mapProductUrls(p, req))

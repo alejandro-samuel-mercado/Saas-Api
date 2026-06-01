@@ -104,9 +104,12 @@ class AuthController {
   }
 
   googleLogin(req, res, next) {
-    
     res.setHeader('Cross-Origin-Opener-Policy', 'unsafe-none');
-    passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+    
+    // Pass tenantId through OAuth state parameter
+    const state = req.query.tenantId ? JSON.stringify({ tenantId: req.query.tenantId }) : undefined;
+    
+    passport.authenticate('google', { scope: ['profile', 'email'], state })(req, res, next);
   }
 
   async googleCallback(req, res, next) {
@@ -117,15 +120,11 @@ class AuthController {
         return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_failed`);
       }
 
-
-
       try {
         const result = await AuthService.loginWithGoogle({
             email: user.email,
             name: user.name
-        });
-
-
+        }, req.tenantId);
 
         const { accessToken, refreshToken } = result.tokens;
         const authData = JSON.stringify({

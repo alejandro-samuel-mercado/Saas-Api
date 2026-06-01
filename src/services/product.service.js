@@ -61,7 +61,8 @@ class ProductService {
             youtubeVideo,
             nutritionalInfo,
             octagonsImage,
-            taxRate
+            taxRate,
+            rubroId
         } = data;
         // Normalización: alias 'skus' para 'variants'
         const finalVariants = variants || skus || [];
@@ -90,7 +91,8 @@ class ProductService {
                     youtubeVideo: youtubeVideo || null,
                     nutritionalInfo: nutritionalInfo || null,
                     octagonsImage: octagonsImage || null,
-                    taxRate: taxRate !== undefined ? (taxRate === "" || taxRate === null || isNaN(parseFloat(taxRate)) ? null : parseFloat(taxRate)) : null
+                    taxRate: taxRate !== undefined ? (taxRate === "" || taxRate === null || isNaN(parseFloat(taxRate)) ? null : parseFloat(taxRate)) : null,
+                    rubroId: rubroId || null
                 }
             });
 
@@ -222,6 +224,8 @@ class ProductService {
             currency,
             includeInactive,
             adminView,
+            saleMode,
+            rubroId,
             ...attributes
         } = params;
 
@@ -235,7 +239,7 @@ class ProductService {
         }
 
         // Ignorar teclas de atributos dinamicos internos/Frameworks
-        const ignoredKeys = ['q', 'term', 'order', 't', '_', 'format', 'search', 'category', 'subcategory', 'brand', 'model', 'minPrice', 'maxPrice', 'sort', 'inStock', 'isTrending', 'isNew', 'freeShipping', 'branchId', 'currency', 'includeInactive', 'adminView'];
+        const ignoredKeys = ['q', 'term', 'order', 't', '_', 'format', 'search', 'category', 'subcategory', 'brand', 'model', 'minPrice', 'maxPrice', 'sort', 'inStock', 'isTrending', 'isNew', 'freeShipping', 'branchId', 'currency', 'includeInactive', 'adminView', 'saleMode', 'ubicacion'];
         const dynamicAttrs = Object.entries(attributes).filter(([k]) => !ignoredKeys.includes(k));
 
         // Sanitizar la paginación
@@ -245,6 +249,30 @@ class ProductService {
         const take = limitNum;
 
         const where = (includeInactive === 'true' || includeInactive === true) ? { isDeleted: false } : { isActive: true, isDeleted: false };
+        if (rubroId) {
+            where.rubroId = Number(rubroId);
+        }
+
+        // 1.5 Custom ubicacion filter (Real Estate)
+        if (params.ubicacion) {
+            const ubiWords = this.normalizeSearchQuery(params.ubicacion).split(' ').filter(w => w.length > 0);
+            if (ubiWords.length > 0) {
+                if (!where.AND) where.AND = [];
+                ubiWords.forEach(word => {
+                    where.AND.push({
+                        OR: [
+                            { name: { contains: word, mode: 'insensitive' } },
+                            { description: { contains: word, mode: 'insensitive' } },
+                            {
+                                // Intentar hacer match con las caracteristicas si prisma lo permite usando JSON, 
+                                // pero como fallback seguro usamos name y desc que suelen contener la ubicacion.
+                                characteristics: { array_contains: [{ value: word }] } // Solo coincidencia exacta si es posible
+                            }
+                        ]
+                    });
+                });
+            }
+        }
 
         // 2. Logica de Categorías (Recursiva)
         // Helper para obtener la ultima cadena de una potencial formacion
@@ -316,6 +344,10 @@ class ProductService {
         // 4. Filtros Estándar
         if (brand) where.brand = { equals: brand, mode: 'insensitive' };
         if (model) where.model = { contains: model, mode: 'insensitive' };
+        
+        if (saleMode && saleMode !== 'all') {
+            where.saleMode = { equals: saleMode, mode: 'insensitive' };
+        }
 
         if (isTrending !== undefined) {
             where.isTrending = isTrending === 'true' || isTrending === true;

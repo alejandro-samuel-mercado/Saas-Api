@@ -12,7 +12,7 @@ async function getCachedTenant(tenantId) {
 
     const tenant = await prisma.tenant.findUnique({
         where: { id: tenantId },
-        include: { plan: true }
+        include: { plan: true, rubro: true }
     });
 
     if (tenant) {
@@ -35,12 +35,19 @@ function invalidateTenantCache(tenantId) {
  */
 const extractTenant = async (req, res, next) => {
     try {
-        const tenantId = req.headers['x-tenant-id'];
+        let tenantId = req.headers['x-tenant-id'] || req.query.tenantId;
+
+        if (!tenantId && req.query.state) {
+            try {
+                const stateObj = JSON.parse(req.query.state);
+                if (stateObj.tenantId) tenantId = stateObj.tenantId;
+            } catch (e) {}
+        }
 
         if (!tenantId) {
             return res.status(400).json({
                 success: false,
-                message: 'Se requiere el identificador del negocio (x-tenant-id).'
+                message: 'Se requiere el identificador del negocio (x-tenant-id o query tenantId).'
             });
         }
 

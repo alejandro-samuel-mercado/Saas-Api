@@ -55,8 +55,10 @@ model Product {
   taxRate         Decimal?       @db.Decimal(10, 2)
   tenantId        String         @default("default")
   saleMode        String         @default("VENTA") // VENTA | ALQUILER | AMBOS
+  rubroId         Int?
   comments        Comment[]
   category        Category       @relation(fields: [categoryId], references: [id])
+  rubro           Rubro?         @relation(fields: [rubroId], references: [id])
   productPrices   ProductPrice[]
   skus            SKU[]
   favoritedBy     User[]         @relation("UserFavorites")
@@ -1157,6 +1159,7 @@ model Rubro {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   tenants         Tenant[]
+  products        Product[]
 }
 
 model SaaSPlan {
