@@ -158,8 +158,14 @@ class SalePreviewService {
                 const isEmployee =
                     user &&
                     ["ADMIN", "SUPER_ADMIN", "EMPLOYEE"].includes(user.role?.name);
+                const tenantWithRubro = await prisma.tenant.findUnique({
+                    where: { id: activeTenantId },
+                    select: { rubro: true }
+                });
+                const isCartEnabled = tenantWithRubro?.rubro ? tenantWithRubro.rubro.cartEnabled !== false : true;
+
                 const safetyBuffer =
-                    !isEmployee && storeConfig ? Number(storeConfig.webSafetyStock) : 0;
+                    !isEmployee && storeConfig && isCartEnabled ? Number(storeConfig.webSafetyStock) : 0;
 
                 const availableForUser = isEmployee
                     ? Number(inventory.stock)

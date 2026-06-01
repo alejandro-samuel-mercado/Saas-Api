@@ -226,8 +226,13 @@ class ProductService {
         } = params;
 
         // Sucursal por defecto si no se provee o es invalida
-        const activeBranchId = Number(branchId) > 0 ? Number(branchId) : 1;
-
+        let activeBranchId = Number(branchId);
+        if (!(activeBranchId > 0)) {
+            const defaultBranch =
+                (await prisma.branch.findFirst({ where: { isHeadquarters: true } })) ||
+                (await prisma.branch.findFirst());
+            activeBranchId = defaultBranch ? defaultBranch.id : 1;
+        }
 
         // Ignorar teclas de atributos dinamicos internos/Frameworks
         const ignoredKeys = ['q', 'term', 'order', 't', '_', 'format', 'search', 'category', 'subcategory', 'brand', 'model', 'minPrice', 'maxPrice', 'sort', 'inStock', 'isTrending', 'isNew', 'freeShipping', 'branchId', 'currency', 'includeInactive', 'adminView'];
@@ -528,7 +533,13 @@ class ProductService {
      * Obtener detalle de producto
      */
     async getProductById(idOrSlug, currencyCode, branchId) {
-        const activeBranchId = Number(branchId) > 0 ? Number(branchId) : 1;
+        let activeBranchId = Number(branchId);
+        if (!(activeBranchId > 0)) {
+            const defaultBranch =
+                (await prisma.branch.findFirst({ where: { isHeadquarters: true } })) ||
+                (await prisma.branch.findFirst());
+            activeBranchId = defaultBranch ? defaultBranch.id : 1;
+        }
         if (!idOrSlug || idOrSlug === 'undefined' || idOrSlug === 'null') return null;
 
         let whereClause = {};
@@ -615,7 +626,7 @@ class ProductService {
             }
             const discountInfo = await DiscountService.getDiscountForProduct(product, {
                 currencyCode: currencyCode,
-                branchId: 1
+                branchId: activeBranchId
             });
 
             product.discountedPrice = discountInfo.discountedPrice;

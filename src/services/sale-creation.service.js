@@ -259,8 +259,15 @@ class SaleCreationService {
                     });
 
                     const reservedQty = Number(reservedQtyResult._sum.quantity || 0);
+
+                    const tenantWithRubro = await tx.tenant.findUnique({
+                        where: { id: activeTenantId },
+                        select: { rubro: true }
+                    });
+                    const isCartEnabled = tenantWithRubro?.rubro ? tenantWithRubro.rubro.cartEnabled !== false : true;
+
                     const safetyBuffer =
-                        !isPOS && storeConfigCached
+                        !isPOS && storeConfigCached && isCartEnabled
                             ? Number(storeConfigCached.webSafetyStock)
                             : 0;
 
