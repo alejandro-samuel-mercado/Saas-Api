@@ -153,6 +153,14 @@ class SaaSService {
         const existing = await prisma.tenant.findUnique({ where: { slug } });
         if (existing) throw { statusCode: 400, message: 'Ya existe un negocio con ese slug.' };
 
+        let initialModules = [];
+        if (data.enabledModules) {
+            initialModules = data.enabledModules;
+        } else if (data.planId) {
+            const plan = await prisma.saaSPlan.findUnique({ where: { id: parseInt(data.planId) }});
+            if (plan) initialModules = plan.enabledModules;
+        }
+
         const tenant = await prisma.tenant.create({
             data: {
                 name: data.name,
@@ -169,6 +177,7 @@ class SaaSService {
                 notes: data.notes || null,
                 ownerPassword: data.ownerPassword || 'admin123',
                 rubroId: data.rubroId ? parseInt(data.rubroId) : null,
+                enabledModules: initialModules,
             },
             include: { plan: true }
         });
@@ -206,6 +215,17 @@ class SaaSService {
 
         if (data.rubroId !== undefined) {
             updateData.rubroId = data.rubroId ? parseInt(data.rubroId) : null;
+        }
+
+        if (data.enabledModules !== undefined) {
+            updateData.enabledModules = data.enabledModules;
+        } else if (data.planId && data.planId !== existingTenant.planId) {
+            const newPlan = await prisma.saaSPlan.findUnique({ where: { id: parseInt(data.planId) } });
+            if (newPlan) {
+                const currentModules = existingTenant.enabledModules || [];
+                const allowedModules = newPlan.enabledModules || [];
+                updateData.enabledModules = currentModules.filter(m => allowedModules.includes(m));
+            }
         }
 
         if (data.ownerPassword) {
@@ -755,7 +775,7 @@ class SaaSService {
         branches: branchCount,
         maxBranches: tenant.plan?.maxBranches || null,
       },
-      enabledModules: tenant.plan?.enabledModules || [],
+      enabledModules: tenant.enabledModules?.length > 0 ? tenant.enabledModules : (tenant.plan?.enabledModules || []),
       features: {
         allowCustomDomain: tenant.plan?.allowCustomDomain || false,
         allowInvoicing: tenant.plan?.allowInvoicing || false,

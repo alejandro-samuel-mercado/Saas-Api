@@ -11,8 +11,13 @@ class CategoryService {
    * Obtener todas las categorías (plana)
    * @returns {Promise<Array>} Lista de categorías
    */
-  async getAllCategories() {
+  async getAllCategories(rubroSlug) {
+    const where = {};
+    if (rubroSlug) {
+      where.products = { some: { rubro: { slug: rubroSlug } } };
+    }
     return await prisma.category.findMany({
+      where,
       orderBy: { name: 'asc' },
       include: {
         _count: { select: { products: true } }

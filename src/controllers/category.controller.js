@@ -12,7 +12,8 @@ class CategoryController {
    */
   async getAll(req, res, next) {
     try {
-      const categories = await CategoryService.getAllCategories();
+      const { rubro } = req.query;
+      const categories = await CategoryService.getAllCategories(rubro);
       res.status(200).json({
         success: true,
         data: categories

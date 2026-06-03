@@ -66,7 +66,9 @@ const checkModuleAccess = (moduleName) => {
   return (req, res, next) => {
     if (!req.tenant?.plan) return next();
 
-    const enabledModules = req.tenant.plan.enabledModules || [];
+    const enabledModules = req.tenant.enabledModules?.length > 0 
+      ? req.tenant.enabledModules 
+      : (req.tenant.plan?.enabledModules || []);
 
     if (!enabledModules.includes(moduleName)) {
       return res.status(403).json({

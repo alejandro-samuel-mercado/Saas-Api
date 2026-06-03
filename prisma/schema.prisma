@@ -501,6 +501,7 @@ model StoreConfig {
   customPageImagesSubtitle String?
   customPageTextsSubtitle  String?
   customPageVideosSubtitle String?
+  customPageChronology     Json?    @default("[]")
   showLogoOnInvoice        Boolean  @default(true)
   showLogoOnTicket         Boolean  @default(true)
   ticketFooter             String?  @default("¡Gracias por su compra!")
@@ -1134,6 +1135,7 @@ model Tenant {
   createdAt              DateTime        @default(now())
   updatedAt              DateTime        @updatedAt
   rubroId                Int?
+  enabledModules         String[]        @default([])
   plan                   SaaSPlan?       @relation("TenantPlan", fields: [planId], references: [id])
   pendingPlan            SaaSPlan?       @relation("TenantPendingPlan", fields: [pendingPlanId], references: [id])
   payments               TenantPayment[]

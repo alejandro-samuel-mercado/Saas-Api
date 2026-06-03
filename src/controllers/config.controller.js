@@ -85,7 +85,10 @@ const getConfig = async (req, res) => {
       where: { id: req.tenantId },
       select: { rubro: true }
     }).catch(() => null);
-    const rubro = tenantWithRubro?.rubro || null;
+    let rubro = tenantWithRubro?.rubro || null;
+    if (!rubro) {
+      rubro = await prisma.rubro.findUnique({ where: { slug: 'general' } }).catch(() => null);
+    }
 
     res.json({ ...finalConfig, activeEvent, planInfo, rubro });
   } catch (error) {
@@ -359,7 +362,10 @@ const getPublicConfig = async (req, res) => {
       where: { id: req.tenantId },
       select: { rubro: true }
     }).catch(() => null);
-    const rubro = tenantWithRubro?.rubro || null;
+    let rubro = tenantWithRubro?.rubro || null;
+    if (!rubro) {
+      rubro = await prisma.rubro.findUnique({ where: { slug: 'general' } }).catch(() => null);
+    }
 
     res.json({ ...finalConfig, activeEvent, detectedCurrency, planInfo, rubro });
   } catch (error) {

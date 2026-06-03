@@ -239,7 +239,7 @@ class ProductService {
         }
 
         // Ignorar teclas de atributos dinamicos internos/Frameworks
-        const ignoredKeys = ['q', 'term', 'order', 't', '_', 'format', 'search', 'category', 'subcategory', 'brand', 'model', 'minPrice', 'maxPrice', 'sort', 'inStock', 'isTrending', 'isNew', 'freeShipping', 'branchId', 'currency', 'includeInactive', 'adminView', 'saleMode', 'ubicacion'];
+        const ignoredKeys = ['q', 'term', 'order', 't', '_', 'format', 'search', 'category', 'subcategory', 'brand', 'model', 'minPrice', 'maxPrice', 'sort', 'inStock', 'isTrending', 'isNew', 'freeShipping', 'branchId', 'currency', 'includeInactive', 'adminView', 'saleMode', 'ubicacion', 'condition'];
         const dynamicAttrs = Object.entries(attributes).filter(([k]) => !ignoredKeys.includes(k));
 
         // Sanitizar la paginación
@@ -347,6 +347,10 @@ class ProductService {
         
         if (saleMode && saleMode !== 'all') {
             where.saleMode = { equals: saleMode, mode: 'insensitive' };
+        }
+
+        if (params.condition) {
+            where.condition = params.condition;
         }
 
         if (isTrending !== undefined) {
