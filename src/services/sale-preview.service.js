@@ -1,4 +1,4 @@
-const { getStoreConfig, getCurrencyByCode } = require('../utils/tenant-helpers');
+const { getStoreConfig, getCurrencyByCode, getTenantId } = require('../utils/tenant-helpers');
 const prisma = require("../config/prisma");
 const PriceService = require("./price.service");
 const CurrencyService = require("./currency.service");
@@ -8,6 +8,7 @@ const EventService = require("./event.service");
 
 class SalePreviewService {
     async previewSale(saleData, userId) {
+        const activeTenantId = getTenantId();
         const {
             items,
             paymentType = "CARD",

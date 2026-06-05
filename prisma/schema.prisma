@@ -8,13 +8,13 @@ datasource db {
 
 model Category {
   id          Int        @id @default(autoincrement())
-  tenantId    String     @default("default")
   name        String
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   description String?
   parentId    Int?
   slug        String     @unique
+  tenantId    String     @default("default")
   parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children    Category[] @relation("CategoryHierarchy")
   products    Product[]
@@ -54,7 +54,7 @@ model Product {
   youtubeVideo    String?
   taxRate         Decimal?       @db.Decimal(10, 2)
   tenantId        String         @default("default")
-  saleMode        String         @default("VENTA") // VENTA | ALQUILER | AMBOS
+  saleMode        String         @default("VENTA")
   rubroId         Int?
   comments        Comment[]
   category        Category       @relation(fields: [categoryId], references: [id])
@@ -100,10 +100,10 @@ model SKU {
 
 model BarcodeSequence {
   id           Int      @id @default(autoincrement())
-  tenantId     String   @default("default")
   prefix       String   @default("779999")
   lastSequence Int      @default(0)
   updatedAt    DateTime @updatedAt
+  tenantId     String   @default("default")
 
   @@index([tenantId])
 }
@@ -120,9 +120,9 @@ model VariantOption {
 
 model Role {
   id          Int          @id @default(autoincrement())
-  tenantId    String       @default("default")
   name        String
   description String?
+  tenantId    String       @default("default")
   users       User[]
   permissions Permission[] @relation("RolePermissions")
 
@@ -140,7 +140,6 @@ model Permission {
 
 model User {
   id               Int                @id @default(autoincrement())
-  tenantId         String             @default("default")
   name             String
   email            String
   password         String
@@ -166,6 +165,7 @@ model User {
   emailVerified    Boolean            @default(false)
   verificationCode String?
   rnt              String?
+  tenantId         String             @default("default")
   accessLogs       AccessLog[]
   auditLogs        AuditLog[]         @relation("AdminActions")
   cart             Cart?
@@ -262,7 +262,6 @@ model Comment {
 
 model Sale {
   id                     Int                  @id @default(autoincrement())
-  tenantId               String               @default("default")
   uuid                   String               @unique @default(uuid())
   userId                 Int?
   employeeId             Int?
@@ -298,11 +297,12 @@ model Sale {
   customerPhone          String?
   customerAddress        String?
   customerDni            String?
+  tenantId               String               @default("default")
   paymentTransactions    PaymentTransaction[]
   branch                 Branch               @relation(fields: [branchId], references: [id])
   coupon                 Coupon?              @relation(fields: [couponId], references: [id])
-  currency               Currency?            @relation(fields: [tenantId, currencyCode], references: [tenantId, code])
   employee               User?                @relation("EmployeeSales", fields: [employeeId], references: [id])
+  currency               Currency?            @relation(fields: [tenantId, currencyCode], references: [tenantId, code])
   user                   User?                @relation("CustomerSales", fields: [userId], references: [id])
   items                  SaleItem[]
   receipt                SaleReceipt?
@@ -332,7 +332,6 @@ model SaleItem {
 
 model Coupon {
   id             Int       @id @default(autoincrement())
-  tenantId       String    @default("default")
   code           String
   type           String
   value          Decimal   @db.Decimal(10, 2)
@@ -345,6 +344,7 @@ model Coupon {
   usedCount      Int       @default(0)
   active         Boolean   @default(true)
   createdAt      DateTime  @default(now())
+  tenantId       String    @default("default")
   sales          Sale[]
 
   @@unique([tenantId, code])
@@ -385,7 +385,6 @@ model StockReservation {
 
 model Event {
   id              Int        @id @default(autoincrement())
-  tenantId        String     @default("default")
   name            String
   active          Boolean    @default(true)
   bannerMessages  Json?
@@ -401,6 +400,7 @@ model Event {
   heroBanners     Json?
   marqueeText     Json?
   secondaryAds    Json?
+  tenantId        String     @default("default")
   discounts       Discount[]
 
   @@index([tenantId])
@@ -408,7 +408,6 @@ model Event {
 
 model Discount {
   id         Int           @id @default(autoincrement())
-  tenantId   String        @default("default")
   name       String
   type       DiscountType
   value      Decimal       @db.Decimal(10, 2)
@@ -422,6 +421,7 @@ model Discount {
   stackable  Boolean       @default(false)
   validFrom  DateTime?     @default(now())
   validUntil DateTime?
+  tenantId   String        @default("default")
   event      Event?        @relation(fields: [eventId], references: [id])
 
   @@index([tenantId])
@@ -429,12 +429,12 @@ model Discount {
 
 model ShippingZone {
   id       Int     @id @default(autoincrement())
-  tenantId String  @default("default")
   country  String?
   province String?
   city     String?
   cost     Decimal @db.Decimal(10, 2)
   active   Boolean @default(true)
+  tenantId String  @default("default")
 
   @@unique([tenantId, country, province, city])
   @@index([tenantId])
@@ -442,7 +442,6 @@ model ShippingZone {
 
 model StoreConfig {
   id                       Int      @id @default(autoincrement())
-  tenantId                 String   @unique @default("default")
   storeName                String   @default("Mi Tienda")
   contactEmail             String?
   contactPhone             String?
@@ -451,8 +450,6 @@ model StoreConfig {
   currencySymbol           String   @default("$")
   lowStockThreshold        Int      @default(5)
   preventStockout          Boolean  @default(true)
-  enableWhatsappCheckout   Boolean  @default(false)
-  whatsappNumber           String?
   enablePoints             Boolean  @default(true)
   pointsPerCurrency        Decimal  @default(0.1) @db.Decimal(12, 4)
   enableShipping           Boolean  @default(true)
@@ -501,27 +498,30 @@ model StoreConfig {
   customPageImagesSubtitle String?
   customPageTextsSubtitle  String?
   customPageVideosSubtitle String?
-  customPageChronology     Json?    @default("[]")
   showLogoOnInvoice        Boolean  @default(true)
   showLogoOnTicket         Boolean  @default(true)
   ticketFooter             String?  @default("¡Gracias por su compra!")
   enableManualStock        Boolean  @default(true)
   bankAccounts             Json?    @default("[]")
-  themeColors              Json?    @default("{}")
   rolePermissions          Json?    @default("{}")
+  themeColors              Json?    @default("{}")
+  tenantId                 String   @unique @default("default")
+  enableWhatsappCheckout   Boolean  @default(false)
+  whatsappNumber           String?
+  customPageChronology     Json?    @default("[]")
 
   @@index([tenantId])
 }
 
 model Currency {
   id                 Int                      @id @default(autoincrement())
-  tenantId           String                   @default("default")
   code               String
   symbol             String
   exchangeRateToBase Decimal                  @db.Decimal(18, 8)
   isActive           Boolean                  @default(true)
   createdAt          DateTime                 @default(now())
   updatedAt          DateTime                 @updatedAt
+  tenantId           String                   @default("default")
   gatewaySupport     GatewayCurrencySupport[]
   productPrices      ProductPrice[]
   purchases          Purchase[]
@@ -529,28 +529,27 @@ model Currency {
   saleReceipts       SaleReceipt[]
   supplierPayments   SupplierPayment[]
 
-  @@index([tenantId])
   @@unique([tenantId, code])
+  @@index([tenantId])
 }
 
 model ProductPrice {
   id           Int      @id @default(autoincrement())
-  tenantId     String   @default("default")
   productId    Int
   currencyCode String
   price        Decimal  @db.Decimal(10, 2)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  currency     Currency @relation(fields: [tenantId, currencyCode], references: [tenantId, code])
+  tenantId     String   @default("default")
   product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  currency     Currency @relation(fields: [tenantId, currencyCode], references: [tenantId, code])
 
-  @@index([tenantId])
   @@unique([productId, currencyCode])
+  @@index([tenantId])
 }
 
 model PaymentGateway {
   id                  Int                      @id @default(autoincrement())
-  tenantId            String                   @default("default")
   name                String
   slug                String
   config              Json?
@@ -558,6 +557,7 @@ model PaymentGateway {
   isGlobalFallback    Boolean                  @default(false)
   createdAt           DateTime                 @default(now())
   updatedAt           DateTime                 @updatedAt
+  tenantId            String                   @default("default")
   supportedCurrencies GatewayCurrencySupport[]
 
   @@unique([tenantId, slug])
@@ -566,21 +566,20 @@ model PaymentGateway {
 
 model GatewayCurrencySupport {
   id           Int            @id @default(autoincrement())
-  tenantId     String         @default("default")
   gatewayId    Int
   currencyCode String
   isPrimary    Boolean        @default(false)
   isSecondary  Boolean        @default(false)
-  currency     Currency       @relation(fields: [tenantId, currencyCode], references: [tenantId, code])
+  tenantId     String         @default("default")
   gateway      PaymentGateway @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
+  currency     Currency       @relation(fields: [tenantId, currencyCode], references: [tenantId, code])
 
-  @@index([tenantId])
   @@unique([tenantId, gatewayId, currencyCode])
+  @@index([tenantId])
 }
 
 model AuditLog {
   id         Int      @id @default(autoincrement())
-  tenantId   String   @default("default")
   action     String
   entityType String
   entityId   String
@@ -590,6 +589,7 @@ model AuditLog {
   userAgent  String?
   createdAt  DateTime @default(now())
   branchId   Int?
+  tenantId   String   @default("default")
   admin      User?    @relation("AdminActions", fields: [adminId], references: [id])
   branch     Branch?  @relation(fields: [branchId], references: [id])
 
@@ -622,7 +622,6 @@ model Transfer {
 
 model Branch {
   id               Int               @id @default(autoincrement())
-  tenantId         String            @default("default")
   name             String
   code             String
   address          String
@@ -644,6 +643,7 @@ model Branch {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   lastTicketNumber Int               @default(0)
+  tenantId         String            @default("default")
   auditLogs        AuditLog[]
   inventory        BranchInventory[]
   expenses         Expense[]         @relation("BranchExpenses")
@@ -664,7 +664,6 @@ model Branch {
 
 model SaleReceipt {
   id           Int         @id @default(autoincrement())
-  tenantId     String      @default("default")
   saleId       Int         @unique
   branchId     Int
   ticketNumber String
@@ -677,12 +676,13 @@ model SaleReceipt {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   currencyCode String?     @default("ARS")
+  tenantId     String      @default("default")
   branch       Branch      @relation(fields: [branchId], references: [id])
-  currency     Currency?   @relation(fields: [tenantId, currencyCode], references: [tenantId, code])
   sale         Sale        @relation(fields: [saleId], references: [id])
+  currency     Currency?   @relation(fields: [tenantId, currencyCode], references: [tenantId, code])
 
-  @@index([tenantId])
   @@unique([branchId, ticketNumber])
+  @@index([tenantId])
 }
 
 model BranchInventory {
@@ -753,7 +753,6 @@ model StockTransferItem {
 
 model Supplier {
   id             Int               @id @default(autoincrement())
-  tenantId       String            @default("default")
   tradeName      String
   legalName      String
   taxId          String
@@ -764,6 +763,7 @@ model Supplier {
   isActive       Boolean           @default(true)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
+  tenantId       String            @default("default")
   purchases      Purchase[]
   payments       SupplierPayment[]
   skus           SupplierSKU[]
@@ -791,7 +791,6 @@ model SupplierSKU {
 
 model Purchase {
   id                     Int              @id @default(autoincrement())
-  tenantId               String           @default("default")
   branchId               Int
   supplierId             Int
   userId                 Int
@@ -807,9 +806,10 @@ model Purchase {
   exchangeRateAtPurchase Decimal?         @default(1.0) @db.Decimal(18, 8)
   totalInBaseCurrency    Decimal?         @db.Decimal(10, 2)
   invoiceUrl             String?
+  tenantId               String           @default("default")
   branch                 Branch           @relation(fields: [branchId], references: [id])
-  currency               Currency?        @relation(fields: [tenantId, currencyCode], references: [tenantId, code])
   supplier               Supplier         @relation(fields: [supplierId], references: [id])
+  currency               Currency?        @relation(fields: [tenantId, currencyCode], references: [tenantId, code])
   user                   User             @relation(fields: [userId], references: [id])
   items                  PurchaseItem[]
   payment                SupplierPayment?
@@ -853,7 +853,6 @@ model StockMovement {
 
 model SupplierPayment {
   id                     Int                   @id @default(autoincrement())
-  tenantId               String                @default("default")
   supplierId             Int
   purchaseId             Int?                  @unique
   amount                 Decimal               @db.Decimal(10, 2)
@@ -866,21 +865,22 @@ model SupplierPayment {
   amountInBaseCurrency   Decimal?              @db.Decimal(10, 2)
   currencyCode           String?               @default("ARS")
   exchangeRateAtPurchase Decimal?              @default(1.0) @db.Decimal(18, 8)
-  currency               Currency?             @relation(fields: [tenantId, currencyCode], references: [tenantId, code])
+  tenantId               String                @default("default")
   purchase               Purchase?             @relation(fields: [purchaseId], references: [id])
   supplier               Supplier              @relation(fields: [supplierId], references: [id])
+  currency               Currency?             @relation(fields: [tenantId, currencyCode], references: [tenantId, code])
 
   @@index([tenantId])
 }
 
 model ChatConversation {
   id        Int           @id @default(autoincrement())
-  tenantId  String        @default("default")
   userId    Int?
   socketId  String?
   closed    Boolean       @default(false)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
+  tenantId  String        @default("default")
   user      User?         @relation(fields: [userId], references: [id])
   messages  ChatMessage[]
 
@@ -899,10 +899,10 @@ model ChatMessage {
 
 model ChatAutoResponse {
   id       Int     @id @default(autoincrement())
-  tenantId String  @default("default")
   trigger  String?
   response String?
   isActive Boolean @default(true)
+  tenantId String  @default("default")
 
   @@unique([tenantId, trigger])
   @@index([tenantId])
@@ -910,7 +910,6 @@ model ChatAutoResponse {
 
 model ErrorLog {
   id          Int           @id @default(autoincrement())
-  tenantId    String        @default("default")
   severity    ErrorSeverity @default(MEDIUM)
   code        String
   message     String
@@ -922,6 +921,7 @@ model ErrorLog {
   resolvedAt  DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+  tenantId    String        @default("default")
 
   @@index([severity])
   @@index([status])
@@ -931,7 +931,6 @@ model ErrorLog {
 
 model BlogPost {
   id           Int       @id @default(autoincrement())
-  tenantId     String    @default("default")
   slug         String
   title        String
   excerpt      String
@@ -946,6 +945,7 @@ model BlogPost {
   publishedAt  DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  tenantId     String    @default("default")
 
   @@unique([tenantId, slug])
   @@index([published])
@@ -955,7 +955,6 @@ model BlogPost {
 
 model Expense {
   id           Int      @id @default(autoincrement())
-  tenantId     String   @default("default")
   branchId     Int?
   adminId      Int
   amount       Decimal  @db.Decimal(10, 2)
@@ -968,8 +967,87 @@ model Expense {
   updatedAt    DateTime @updatedAt
   isActive     Boolean  @default(true)
   invoiceUrl   String?
+  tenantId     String   @default("default")
   admin        User     @relation("UserExpenses", fields: [adminId], references: [id])
   branch       Branch?  @relation("BranchExpenses", fields: [branchId], references: [id])
+
+  @@index([tenantId])
+}
+
+model Tenant {
+  id                     String          @id @default(uuid())
+  name                   String
+  slug                   String          @unique
+  ownerName              String
+  ownerEmail             String
+  ownerPhone             String?
+  domain                 String?         @unique
+  planId                 Int?
+  status                 TenantStatus    @default(ACTIVE)
+  pauseReason            String?
+  subscriptionStart      DateTime        @default(now())
+  subscriptionEnd        DateTime?
+  lastPaymentDate        DateTime?
+  monthlyPrice           Decimal?        @db.Decimal(10, 2)
+  notes                  String?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  pendingPlanId          Int?
+  pendingPlanRequestedAt DateTime?
+  ownerPassword          String?         @default("admin123")
+  rubroId                Int?
+  enabledModules         String[]        @default([])
+  pendingPlan            SaaSPlan?       @relation("TenantPendingPlan", fields: [pendingPlanId], references: [id])
+  plan                   SaaSPlan?       @relation("TenantPlan", fields: [planId], references: [id])
+  rubro                  Rubro?          @relation(fields: [rubroId], references: [id])
+  payments               TenantPayment[]
+}
+
+model Rubro {
+  id                Int       @id @default(autoincrement())
+  slug              String    @unique
+  name              String
+  icon              String?   @default("store")
+  disabledModules   String[]  @default([])
+  cartEnabled       Boolean   @default(true)
+  posEnabled        Boolean   @default(true)
+  storefrontLayout  String    @default("standard")
+  productFormConfig Json?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  products          Product[]
+  tenants           Tenant[]
+}
+
+model SaaSPlan {
+  id                Int      @id @default(autoincrement())
+  name              String   @unique
+  monthlyPrice      Decimal  @db.Decimal(10, 2)
+  maxProducts       Int      @default(50)
+  maxBranches       Int      @default(1)
+  allowCustomDomain Boolean  @default(false)
+  allowInvoicing    Boolean  @default(false)
+  allowPOS          Boolean  @default(false)
+  enabledModules    String[] @default(["products", "sales", "categories", "settings"])
+  description       String?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  pendingTenants    Tenant[] @relation("TenantPendingPlan")
+  tenants           Tenant[] @relation("TenantPlan")
+}
+
+model TenantPayment {
+  id        Int      @id @default(autoincrement())
+  tenantId  String
+  amount    Decimal  @db.Decimal(10, 2)
+  period    String
+  method    String?
+  reference String?
+  paidAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId])
 }
@@ -1111,87 +1189,4 @@ enum TenantStatus {
   ACTIVE
   PAUSED
   SUSPENDED
-}
-
-model Tenant {
-  id                     String          @id @default(uuid())
-  name                   String
-  slug                   String          @unique
-  ownerName              String
-  ownerEmail             String
-  ownerPhone             String?
-  domain                 String?         @unique
-  planId                 Int?
-  pendingPlanId          Int?
-  pendingPlanRequestedAt DateTime?
-  status                 TenantStatus    @default(ACTIVE)
-  pauseReason            String?
-  subscriptionStart      DateTime        @default(now())
-  subscriptionEnd        DateTime?
-  lastPaymentDate        DateTime?
-  monthlyPrice           Decimal?        @db.Decimal(10, 2)
-  notes                  String?
-  ownerPassword          String?         @default("admin123")
-  createdAt              DateTime        @default(now())
-  updatedAt              DateTime        @updatedAt
-  rubroId                Int?
-  enabledModules         String[]        @default([])
-  plan                   SaaSPlan?       @relation("TenantPlan", fields: [planId], references: [id])
-  pendingPlan            SaaSPlan?       @relation("TenantPendingPlan", fields: [pendingPlanId], references: [id])
-  payments               TenantPayment[]
-  rubro                  Rubro?          @relation(fields: [rubroId], references: [id])
-}
-
-model Rubro {
-  id              Int      @id @default(autoincrement())
-  slug            String   @unique
-  name            String
-  icon            String?  @default("store")
-  // Módulos deshabilitados para este rubro (se ocultan en el sidebar del admin)
-  disabledModules String[] @default([])
-  // false = el rubro NO usa carrito/checkout (ej: Inmuebles)
-  cartEnabled     Boolean  @default(true)
-  // false = el POS se oculta para este rubro
-  posEnabled      Boolean  @default(true)
-  // Layout del storefront: "standard" | "property"
-  storefrontLayout String  @default("standard")
-  // Hints para el formulario de producto (JSON libre)
-  productFormConfig Json?
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  tenants         Tenant[]
-  products        Product[]
-}
-
-model SaaSPlan {
-  id                Int      @id @default(autoincrement())
-  name              String   @unique
-  monthlyPrice      Decimal  @db.Decimal(10, 2)
-  maxProducts       Int      @default(50)
-  maxBranches       Int      @default(1)
-  allowCustomDomain Boolean  @default(false)
-  allowInvoicing    Boolean  @default(false)
-  allowPOS          Boolean  @default(false)
-  enabledModules    String[] @default(["products", "sales", "categories", "settings"])
-  description       String?
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  tenants           Tenant[] @relation("TenantPlan")
-  pendingTenants    Tenant[] @relation("TenantPendingPlan")
-}
-
-model TenantPayment {
-  id        Int      @id @default(autoincrement())
-  tenantId  String
-  amount    Decimal  @db.Decimal(10, 2)
-  period    String
-  method    String?
-  reference String?
-  paidAt    DateTime @default(now())
-  createdAt DateTime @default(now())
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-
-  @@index([tenantId])
 }
