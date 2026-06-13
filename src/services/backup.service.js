@@ -31,16 +31,13 @@ class BackupService {
         // Obtener la lista dinámica de todos los modelos
         const models = Prisma.dmmf.datamodel.models;
         
-        const { PrismaClient } = require('@prisma/client');
-        const rawPrisma = new PrismaClient();
-        
         for (const model of models) {
             const modelName = model.name;
             const delegateName = modelName.charAt(0).toLowerCase() + modelName.slice(1);
             
             try {
-                if (rawPrisma[delegateName] && typeof rawPrisma[delegateName].findMany === 'function') {
-                    const data = await rawPrisma[delegateName].findMany();
+                if (prisma[delegateName] && typeof prisma[delegateName].findMany === 'function') {
+                    const data = await prisma[delegateName].findMany();
                     const filePath = path.join(folderPath, `${modelName}.json`);
                     
                     const jsonContent = JSON.stringify(data, (key, value) => {
@@ -53,8 +50,6 @@ class BackupService {
                 console.error(`[BackupService] Failed to backup table ${modelName}:`, error.message);
             }
         }
-        
-        await rawPrisma.$disconnect();
 
         return folderPath;
     }
