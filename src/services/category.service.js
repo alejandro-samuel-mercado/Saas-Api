@@ -9,19 +9,13 @@ class CategoryService {
   
   /**
    * Obtener todas las categorías (plana)
-   * @returns {Promise<Array>} Lista de categorías
+   * Los datos pertenecen al negocio (tenantId inyectado por middleware Prisma).
+   * El rubro es solo layout — no filtra datos.
+   * @returns {Promise<Array>} Lista de categorías del tenant activo
    */
-  async getAllCategories(rubroSlug) {
-    const where = {};
-    if (rubroSlug) {
-      // Filtrar categorías que tengan productos del rubro indicado Y del tenant activo.
-      // El middleware Prisma inyecta tenantId en la query raíz (category),
-      // pero el sub-filtro de products requiere tenantId explícito para
-      // evitar que aparezcan categorías de otros tenants que compartan el mismo rubro.
-      where.products = { some: { rubro: { slug: rubroSlug }, isDeleted: false } };
-    }
+  async getAllCategories() {
     return await prisma.category.findMany({
-      where,
+      where: { isDeleted: false },
       orderBy: { name: 'asc' },
       include: {
         _count: { select: { products: { where: { isDeleted: false } } } }
@@ -31,23 +25,14 @@ class CategoryService {
 
   /**
    * Obtener árbol de categorías jerárquico (L1 -> L2 -> L3...)
+   * Los datos pertenecen al negocio (tenantId inyectado por middleware Prisma).
+   * El rubro es solo layout — no filtra datos.
    * @returns {Promise<Array>} Lista de categorías raíz con sus hijos anidados
    */
-  async getCategoryTree(rubroSlug) {
-    const where = {};
-    if (rubroSlug) {
-      // Igual que en getAllCategories: el sub-filtro de productos
-      // debe restringirse a productos no eliminados del rubro indicado.
-      // El tenantId del tenant activo es inyectado automáticamente por Prisma
-      // en el modelo Category raíz.
-      where.products = { some: { rubro: { slug: rubroSlug }, isDeleted: false } };
-    }
-
+  async getCategoryTree() {
     const allCategories = await prisma.category.findMany({
-      where,
-      orderBy: {
-        name: "asc", 
-      },
+      where: { isDeleted: false },
+      orderBy: { name: 'asc' },
       include: {
         _count: {
           select: {

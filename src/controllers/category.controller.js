@@ -12,8 +12,7 @@ class CategoryController {
    */
   async getAll(req, res, next) {
     try {
-      const { rubro } = req.query;
-      const categories = await CategoryService.getAllCategories(rubro);
+      const categories = await CategoryService.getAllCategories();
       res.status(200).json({
         success: true,
         data: categories
@@ -29,8 +28,7 @@ class CategoryController {
    */
   async getTree(req, res, next) {
     try {
-      const { rubro } = req.query;
-      const tree = await CategoryService.getCategoryTree(rubro);
+      const tree = await CategoryService.getCategoryTree();
       res.status(200).json({
         success: true,
         data: tree

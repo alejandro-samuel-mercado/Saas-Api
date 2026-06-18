@@ -61,8 +61,7 @@ class ProductService {
             youtubeVideo,
             nutritionalInfo,
             octagonsImage,
-            taxRate,
-            rubroId
+            taxRate
         } = data;
         // Normalización: alias 'skus' para 'variants'
         const finalVariants = variants || skus || [];
@@ -91,8 +90,7 @@ class ProductService {
                     youtubeVideo: youtubeVideo || null,
                     nutritionalInfo: nutritionalInfo || null,
                     octagonsImage: octagonsImage || null,
-                    taxRate: taxRate !== undefined ? (taxRate === "" || taxRate === null || isNaN(parseFloat(taxRate)) ? null : parseFloat(taxRate)) : null,
-                    rubroId: rubroId || null
+                    taxRate: taxRate !== undefined ? (taxRate === "" || taxRate === null || isNaN(parseFloat(taxRate)) ? null : parseFloat(taxRate)) : null
                 }
             });
 
@@ -225,7 +223,6 @@ class ProductService {
             includeInactive,
             adminView,
             saleMode,
-            rubroId,
             ...attributes
         } = params;
 
@@ -249,9 +246,6 @@ class ProductService {
         const take = limitNum;
 
         const where = (includeInactive === 'true' || includeInactive === true) ? { isDeleted: false } : { isActive: true, isDeleted: false };
-        if (rubroId) {
-            where.rubroId = Number(rubroId);
-        }
 
         // 1.5 Custom ubicacion filter (Real Estate)
         if (params.ubicacion) {

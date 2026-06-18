@@ -56,10 +56,8 @@ model Product {
   taxRate         Decimal?       @db.Decimal(10, 2)
   tenantId        String         @default("default")
   saleMode        String         @default("VENTA")
-  rubroId         Int?
   comments        Comment[]
   category        Category       @relation(fields: [categoryId], references: [id])
-  rubro           Rubro?         @relation(fields: [rubroId], references: [id])
   productPrices   ProductPrice[]
   skus            SKU[]
   favoritedBy     User[]         @relation("UserFavorites")
@@ -1017,7 +1015,6 @@ model Rubro {
   isActive          Boolean   @default(true)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
-  products          Product[]
   tenants           Tenant[]
 }
 
