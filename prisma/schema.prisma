@@ -13,12 +13,13 @@ model Category {
   updatedAt   DateTime   @updatedAt
   description String?
   parentId    Int?
-  slug        String     @unique
+  slug        String
   tenantId    String     @default("default")
   parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children    Category[] @relation("CategoryHierarchy")
   products    Product[]
 
+  @@unique([tenantId, slug])
   @@index([tenantId])
 }
 

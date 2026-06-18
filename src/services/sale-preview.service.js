@@ -35,6 +35,8 @@ class SalePreviewService {
 
         let activeBranchId = Number(branchId);
         if (!(activeBranchId > 0)) {
+            // El middleware Prisma inyecta el tenantId del contexto activo en este findFirst.
+            // Esto garantiza que solo se devuelve la sede central del tenant correcto.
             const defaultBranch =
                 (await prisma.branch.findFirst({ where: { isHeadquarters: true } })) ||
                 (await prisma.branch.findFirst());

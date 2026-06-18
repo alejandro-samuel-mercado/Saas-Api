@@ -280,6 +280,8 @@ class ProductService {
 
         const categorySlug = getSlug(subcategory) || getSlug(category);
         if (categorySlug) {
+            // Buscar siempre por slug + tenantId para evitar traer categorías de otros tenants.
+            // El middleware Prisma inyecta tenantId automáticamente desde el contexto activo.
             const categoryRecord = await prisma.category.findFirst({
                 where: { slug: categorySlug },
                 select: { id: true }
@@ -289,7 +291,7 @@ class ProductService {
                 const categoryIds = await this.getDescendantCategoryIds(categoryRecord.id);
                 where.categoryId = { in: categoryIds };
             } else {
-                // Casilleria de categoría no encontrada - devolver un resultado nulo inmediatamente
+                // Categoría no encontrada para este tenant — devolver resultado vacío
                 return {
                     data: [],
                     total: 0,
@@ -1049,11 +1051,15 @@ class ProductService {
             errors: []
         };
 
+        // Traer SOLO las sucursales activas del tenant activo.
+        // El middleware Prisma inyecta tenantId automáticamente desde el AsyncLocalStorage.
         const branches = await prisma.branch.findMany({ where: { isActive: true }, select: { id: true } });
 
         for (const item of productsData) {
             try {
-                // 1. Normalizar y buscar Categoría
+                // 1. Normalizar y buscar Categoría del tenant activo.
+                // Con el schema actualizado (@@unique[tenantId, slug]), findFirst busca
+                // dentro del tenant del contexto activo. Si no existe, la crea para ese tenant.
                 const catName = item.Categoria || item.Category || 'General';
                 const catSlug = catName.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
 

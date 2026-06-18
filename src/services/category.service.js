@@ -14,13 +14,17 @@ class CategoryService {
   async getAllCategories(rubroSlug) {
     const where = {};
     if (rubroSlug) {
-      where.products = { some: { rubro: { slug: rubroSlug } } };
+      // Filtrar categorías que tengan productos del rubro indicado Y del tenant activo.
+      // El middleware Prisma inyecta tenantId en la query raíz (category),
+      // pero el sub-filtro de products requiere tenantId explícito para
+      // evitar que aparezcan categorías de otros tenants que compartan el mismo rubro.
+      where.products = { some: { rubro: { slug: rubroSlug }, isDeleted: false } };
     }
     return await prisma.category.findMany({
       where,
       orderBy: { name: 'asc' },
       include: {
-        _count: { select: { products: true } }
+        _count: { select: { products: { where: { isDeleted: false } } } }
       }
     });
   }
@@ -32,7 +36,11 @@ class CategoryService {
   async getCategoryTree(rubroSlug) {
     const where = {};
     if (rubroSlug) {
-      where.products = { some: { rubro: { slug: rubroSlug } } };
+      // Igual que en getAllCategories: el sub-filtro de productos
+      // debe restringirse a productos no eliminados del rubro indicado.
+      // El tenantId del tenant activo es inyectado automáticamente por Prisma
+      // en el modelo Category raíz.
+      where.products = { some: { rubro: { slug: rubroSlug }, isDeleted: false } };
     }
 
     const allCategories = await prisma.category.findMany({
@@ -43,7 +51,7 @@ class CategoryService {
       include: {
         _count: {
           select: {
-            products: true
+            products: { where: { isDeleted: false } }
           }
         }
       }
