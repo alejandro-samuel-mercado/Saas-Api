@@ -213,8 +213,16 @@ class SaaSService {
             updateData.monthlyPrice = data.monthlyPrice;
         }
 
+        // SEGURIDAD: El rubro es PERMANENTE una vez asignado. No se puede cambiar.
+        // Solo se puede asignar si el tenant aún no tiene rubro (primera configuración).
         if (data.rubroId !== undefined) {
-            updateData.rubroId = data.rubroId ? parseInt(data.rubroId) : null;
+            if (existingTenant.rubroId && existingTenant.rubroId !== (data.rubroId ? parseInt(data.rubroId) : null)) {
+                throw { statusCode: 400, message: 'El rubro de un negocio no puede modificarse una vez asignado. El rubro define la estructura de datos del negocio.' };
+            }
+            if (!existingTenant.rubroId && data.rubroId) {
+                // Solo se permite asignar si no tenía ninguno
+                updateData.rubroId = parseInt(data.rubroId);
+            }
         }
 
         if (data.enabledModules !== undefined) {
@@ -798,9 +806,21 @@ class SaaSService {
   }
 
   async updateTenantRubro(tenantId, rubroId) {
+    // SEGURIDAD: El rubro es PERMANENTE una vez asignado al negocio.
+    // Cambiar el rubro después de la inicialización causaría inconsistencias graves de datos
+    // (categorías, productos, configuraciones son específicas por rubro).
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
     if (!tenant) throw { statusCode: 404, message: 'Tenant no encontrado' };
 
+    if (tenant.rubroId) {
+      throw {
+        statusCode: 400,
+        message: 'El rubro de este negocio no puede modificarse. Una vez asignado, el rubro es permanente para garantizar la integridad de los datos del negocio (categorías, productos, configuraciones, etc.).',
+        code: 'RUBRO_IMMUTABLE'
+      };
+    }
+
+    // Si no tiene rubro aún, se permite asignarlo por primera vez
     const updated = await prisma.tenant.update({
       where: { id: tenantId },
       data: { rubroId: rubroId ? parseInt(rubroId) : null },
