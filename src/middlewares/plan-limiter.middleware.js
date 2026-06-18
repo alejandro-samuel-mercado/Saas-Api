@@ -10,15 +10,19 @@ const checkProductLimit = async (req, res, next) => {
     const maxProducts = req.tenant.plan.maxProducts;
     if (!maxProducts || maxProducts <= 0) return next(); // sin límite
 
+    // Prisma ya inyecta tenantId automáticamente desde el contexto del request.
+    // Solo filtramos productos no eliminados del tenant activo.
     const count = await prisma.product.count({
-      where: { category: { tenantId: req.tenantId } }
+      where: { isDeleted: false }
     });
 
     if (count >= maxProducts) {
+      console.warn(`[PlanLimiter] Tenant "${req.tenant.name}" alcanzó el límite de productos: ${count}/${maxProducts}`);
       return res.status(403).json({
         success: false,
         message: `Su plan "${req.tenant.plan.name}" permite hasta ${maxProducts} productos. Actualice su plan para agregar más.`,
-        code: 'PLAN_LIMIT_PRODUCTS'
+        code: 'PLAN_LIMIT_PRODUCTS',
+        usage: { current: count, max: maxProducts }
       });
     }
 
@@ -39,15 +43,18 @@ const checkBranchLimit = async (req, res, next) => {
     const maxBranches = req.tenant.plan.maxBranches;
     if (!maxBranches || maxBranches <= 0) return next();
 
+    // tenantId auto-inyectado por Prisma desde el contexto del request.
     const count = await prisma.branch.count({
-      where: { tenantId: req.tenantId }
+      where: { isActive: true }
     });
 
     if (count >= maxBranches) {
+      console.warn(`[PlanLimiter] Tenant "${req.tenant.name}" alcanzó el límite de sucursales: ${count}/${maxBranches}`);
       return res.status(403).json({
         success: false,
         message: `Su plan "${req.tenant.plan.name}" permite hasta ${maxBranches} sucursales. Actualice su plan para agregar más.`,
-        code: 'PLAN_LIMIT_BRANCHES'
+        code: 'PLAN_LIMIT_BRANCHES',
+        usage: { current: count, max: maxBranches }
       });
     }
 

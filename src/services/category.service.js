@@ -29,8 +29,14 @@ class CategoryService {
    * Obtener árbol de categorías jerárquico (L1 -> L2 -> L3...)
    * @returns {Promise<Array>} Lista de categorías raíz con sus hijos anidados
    */
-  async getCategoryTree() {
+  async getCategoryTree(rubroSlug) {
+    const where = {};
+    if (rubroSlug) {
+      where.products = { some: { rubro: { slug: rubroSlug } } };
+    }
+
     const allCategories = await prisma.category.findMany({
+      where,
       orderBy: {
         name: "asc", 
       },
