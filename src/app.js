@@ -232,6 +232,8 @@ app.use(async (err, req, res, next) => {
   const isOperational = err.isOperational || (statusCode >= 400 && statusCode < 500);
   const responseMessage = isOperational ? sanitizeErrorMessage(err) : 'Ha ocurrido un error interno. Por favor intente más tarde.';
 
+  console.error("DEBUG INTERNAL ERROR:", err.message, err.code);
+
   res.status(statusCode).json({ 
     success: false, 
     message: responseMessage,

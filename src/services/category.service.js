@@ -15,7 +15,6 @@ class CategoryService {
    */
   async getAllCategories() {
     return await prisma.category.findMany({
-      where: { isDeleted: false },
       orderBy: { name: 'asc' },
       include: {
         _count: { select: { products: { where: { isDeleted: false } } } }
@@ -31,7 +30,6 @@ class CategoryService {
    */
   async getCategoryTree() {
     const allCategories = await prisma.category.findMany({
-      where: { isDeleted: false },
       orderBy: { name: 'asc' },
       include: {
         _count: {
