@@ -508,6 +508,7 @@ model StoreConfig {
   enableWhatsappCheckout   Boolean  @default(false)
   whatsappNumber           String?
   customPageChronology     Json?    @default("[]")
+  customPageFaq            Json?    @default("[]")
 
   @@index([tenantId])
 }

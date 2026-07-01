@@ -160,7 +160,8 @@ const updateConfig = async (req, res) => {
       "themeColors",
       "rolePermissions",
       "enableWhatsappCheckout",
-      "whatsappNumber"
+      "whatsappNumber",
+      "customPageChronology"
     ];
 
     fields.forEach((f) => {
@@ -211,6 +212,10 @@ const updateConfig = async (req, res) => {
 
     if (data.rolePermissions !== undefined) {
       updateData.rolePermissions = typeof data.rolePermissions === 'object' && data.rolePermissions !== null ? data.rolePermissions : {};
+    }
+
+    if (data.customPageChronology !== undefined) {
+      updateData.customPageChronology = Array.isArray(data.customPageChronology) ? data.customPageChronology : [];
     }
 
     const existing = await prisma.storeConfig.findFirst({ where: { tenantId: req.tenantId } });
@@ -298,7 +303,8 @@ const getPublicConfig = async (req, res) => {
       "navItemName", "customPageTitle", "customPageDescription",
       "customPageImage", "customPageVideo", "customPageImages",
       "customPageVideos", "customPageTexts", "customPageTextsSubtitle",
-      "customPageImagesSubtitle", "customPageVideosSubtitle", "bankAccounts", "themeColors", "rolePermissions"
+      "customPageImagesSubtitle", "customPageVideosSubtitle", "bankAccounts", "themeColors", "rolePermissions",
+      "customPageChronology"
     ];
 
     const sanitizedConfig = {};
