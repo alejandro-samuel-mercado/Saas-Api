@@ -113,10 +113,11 @@ const extractTenant = async (req, res, next) => {
  * pero SI hay tenant en el header, lo valida
  */
 const optionalTenant = async (req, res, next) => {
-    const tenantId = req.headers['x-tenant-id'];
-    if (tenantId) {
+    const tenantId = req.headers['x-tenant-id'] || req.query.tenantId;
+    if (tenantId && tenantId !== 'default') {
         return extractTenant(req, res, next);
     }
+    // Si es default o no viene, pasamos sin inyectar req.tenantId
     next();
 };
 

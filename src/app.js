@@ -61,11 +61,19 @@ const saasController = require('./controllers/saas.controller');
 app.get('/api/tenant/plan-info', extractTenant, saasController.getTenantPlanInfo);
 
 // ========== TENANT MIDDLEWARE GLOBAL (para todas las rutas de negocio) ==========
+const { optionalTenant } = require('./middlewares/tenant.middleware');
+
 app.use('/api', (req, res, next) => {
   // Excluir las rutas SaaS del tenant middleware (ya se manejaron arriba)
   if (req.path.startsWith('/saas') || req.path.startsWith('/tenant/plan-info')) {
     return next();
   }
+
+  // Las rutas de autenticación pueden ser sin tenant específico (para el panel global)
+  if (req.path.startsWith('/auth')) {
+    return optionalTenant(req, res, next);
+  }
+
   return extractTenant(req, res, next);
 });
 
