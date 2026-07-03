@@ -10,13 +10,27 @@ async function getCachedTenant(tenantId) {
         return cached.data;
     }
 
-    const tenant = await prisma.tenant.findUnique({
-        where: { id: tenantId },
-        include: { plan: true, rubro: true }
-    });
+    // Busca por ID (si es un UUID) o por slug
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tenantId);
+    
+    let tenant = null;
+    if (isUuid) {
+        tenant = await prisma.tenant.findUnique({
+            where: { id: tenantId },
+            include: { plan: true, rubro: true }
+        });
+    } else {
+        tenant = await prisma.tenant.findUnique({
+            where: { slug: tenantId },
+            include: { plan: true, rubro: true }
+        });
+    }
 
     if (tenant) {
+        // Guardamos en caché usando la key provista (que podría ser el slug)
         tenantCache.set(tenantId, { data: tenant, fetchedAt: Date.now() });
+        // También guardamos por el ID real para evitar misses futuros
+        tenantCache.set(tenant.id, { data: tenant, fetchedAt: Date.now() });
     }
     return tenant;
 }
@@ -81,10 +95,11 @@ const extractTenant = async (req, res, next) => {
             });
         }
 
-        req.tenantId = tenantId;
+        // Siempre inyectar el ID real (UUID) para que el resto del sistema consulte correctamente
+        req.tenantId = tenant.id;
         req.tenant = tenant;
 
-        tenantContext.run(tenantId, () => {
+        tenantContext.run(tenant.id, () => {
             next();
         });
     } catch (error) {
