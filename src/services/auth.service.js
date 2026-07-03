@@ -259,13 +259,28 @@ class AuthService {
     
     let user;
     try {
-        user = await prisma.user.findFirst({
-             where: { email: normalizedEmail, tenantId },
-             include: { 
-                role: true,
-                adminBranches: true 
-             }
-        });
+        if (tenantId && tenantId !== 'default') {
+            user = await prisma.user.findFirst({
+                 where: { email: normalizedEmail, tenantId },
+                 include: { 
+                    role: true,
+                    adminBranches: true 
+                 }
+            });
+        } else {
+            // Búsqueda global para el panel de administración central
+            user = await prisma.user.findFirst({
+                 where: { 
+                     email: normalizedEmail,
+                     // Buscamos a alguien que sea empleado o administrador, no un simple cliente
+                     role: { name: { in: ['SUPER_ADMIN', 'ADMIN', 'EMPLOYEE'] } }
+                 },
+                 include: { 
+                    role: true,
+                    adminBranches: true 
+                 }
+            });
+        }
     } catch (dbError) {
         console.error('[AuthService] DB Error:', dbError);
         throw new AppError('Error de conexión con la base de datos.', 500, 'DB_ERROR');
