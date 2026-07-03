@@ -7,7 +7,18 @@ const crypto = require('crypto');
 class AuthService {
 
   async forgotPassword(email, tenantId) {
-    const user = await prisma.user.findFirst({ where: { email: email.toLowerCase(), tenantId } });
+    let user;
+    if (tenantId && tenantId !== 'default') {
+        user = await prisma.user.findFirst({ where: { email: email.toLowerCase(), tenantId } });
+    } else {
+        user = await prisma.user.findFirst({ 
+            where: { 
+                email: email.toLowerCase(),
+                role: { name: { in: ['SUPER_ADMIN', 'ADMIN', 'EMPLOYEE'] } } 
+            } 
+        });
+    }
+    
     if (!user) throw new Error('No se encontró un usuario con ese correo electrónico.');
 
     // Generar código de 6 dígitos
@@ -38,7 +49,18 @@ class AuthService {
   }
 
   async resetPassword(email, code, newPassword, tenantId) {
-    const user = await prisma.user.findFirst({ where: { email: email.toLowerCase(), tenantId } });
+    let user;
+    if (tenantId && tenantId !== 'default') {
+        user = await prisma.user.findFirst({ where: { email: email.toLowerCase(), tenantId } });
+    } else {
+        user = await prisma.user.findFirst({ 
+            where: { 
+                email: email.toLowerCase(),
+                role: { name: { in: ['SUPER_ADMIN', 'ADMIN', 'EMPLOYEE'] } } 
+            } 
+        });
+    }
+    
     if (!user) throw new Error('Usuario no encontrado.');
 
     if (!user.resetCode || user.resetCode !== code) {
