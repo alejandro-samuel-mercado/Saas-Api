@@ -65,7 +65,12 @@ const extractTenant = async (req, res, next) => {
             });
         }
 
-        const tenant = await getCachedTenant(tenantId);
+        let tenant;
+        if (tenantId === 'default') {
+            tenant = { id: 'default', slug: 'default', name: 'Master SaaS', status: 'ACTIVE' };
+        } else {
+            tenant = await getCachedTenant(tenantId);
+        }
 
         if (!tenant) {
             return res.status(404).json({
