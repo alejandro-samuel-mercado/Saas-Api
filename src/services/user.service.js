@@ -70,8 +70,9 @@ class UserService {
   }
 
   async getProfile(userId) {
-    return await prisma.user.findUnique({
-      where: { id: parseInt(userId) },
+    const tenantId = require('../utils/async-context').getStore();
+    return await prisma.user.findFirst({
+      where: { id: parseInt(userId), tenantId },
       include: { 
           role: true, 
           pointsHistory: { orderBy: { createdAt: 'desc' }, take: 20 } 
@@ -110,7 +111,8 @@ class UserService {
         updateData.password = await AuthUtils.hashPassword(data.password);
     }
 
-    const user = await prisma.user.findUnique({ where: { id: parseInt(userId) } });
+    const tenantId = require('../utils/async-context').getStore();
+    const user = await prisma.user.findFirst({ where: { id: parseInt(userId), tenantId } });
     if (!user) throw new Error('User not found');
 
     const updatedUser = await prisma.user.update({
@@ -208,6 +210,9 @@ class UserService {
   }
 
   async updateUserRole(id, roleId) {
+      const tenantId = require('../utils/async-context').getStore();
+      const user = await prisma.user.findFirst({ where: { id: parseInt(id), tenantId } });
+      if (!user) throw new Error('User not found');
       return await prisma.user.update({
           where: { id: parseInt(id) },
           data: { roleId: parseInt(roleId) }
@@ -216,6 +221,10 @@ class UserService {
 
   async deleteUser(id, adminId, ip) {
     const userId = parseInt(id);
+    const tenantId = require('../utils/async-context').getStore();
+    const user = await prisma.user.findFirst({ where: { id: userId, tenantId } });
+    if (!user) throw new Error('User not found');
+
     const salesCount = await prisma.sale.count({ where: { userId } });
     
     const result = salesCount > 0 
@@ -257,8 +266,9 @@ class UserService {
   // --- FAVORITOS ---
 
   async getFavorites(userId) {
-      const user = await prisma.user.findUnique({
-          where: { id: parseInt(userId) },
+      const tenantId = require('../utils/async-context').getStore();
+      const user = await prisma.user.findFirst({
+          where: { id: parseInt(userId), tenantId },
           include: { 
               favorites: {
                   include: {
@@ -271,6 +281,9 @@ class UserService {
   }
 
   async addFavorite(userId, productId) {
+      const tenantId = require('../utils/async-context').getStore();
+      const user = await prisma.user.findFirst({ where: { id: parseInt(userId), tenantId } });
+      if (!user) throw new Error('User not found');
       return await prisma.user.update({
           where: { id: parseInt(userId) },
           data: {
@@ -283,6 +296,9 @@ class UserService {
   }
 
   async removeFavorite(userId, productId) {
+      const tenantId = require('../utils/async-context').getStore();
+      const user = await prisma.user.findFirst({ where: { id: parseInt(userId), tenantId } });
+      if (!user) throw new Error('User not found');
       return await prisma.user.update({
           where: { id: parseInt(userId) },
           data: {

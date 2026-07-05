@@ -75,8 +75,9 @@ class SaleLifecycleService {
 
         if (updateData.paymentStatus === "PAID" && sale.paymentStatus !== "PAID") {
             await prisma.$transaction(async (tx) => {
+                const tenantId = require('../utils/async-context').getStore();
                 const freshSaleRows = await tx.$queryRaw`
-                     SELECT "paymentStatus" FROM "Sale" WHERE id = ${parseInt(id)} FOR UPDATE
+                     SELECT "paymentStatus" FROM "Sale" WHERE id = ${parseInt(id)} AND "tenantId" = ${tenantId} FOR UPDATE
                  `;
                 if (freshSaleRows[0]?.paymentStatus !== "PAID") return;
 
@@ -125,8 +126,9 @@ class SaleLifecycleService {
 
     async cancelSale(id, userId, roleName) {
         await prisma.$transaction(async (tx) => {
+            const tenantId = require('../utils/async-context').getStore();
             const lockedRows = await tx.$queryRaw`
-               SELECT * FROM "Sale" WHERE id = ${parseInt(id)} FOR UPDATE
+               SELECT * FROM "Sale" WHERE id = ${parseInt(id)} AND "tenantId" = ${tenantId} FOR UPDATE
            `;
             if (!lockedRows || lockedRows.length === 0)
                 throw new Error("La venta a cancelar no fue encontrada.");

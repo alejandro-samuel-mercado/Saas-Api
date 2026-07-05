@@ -41,6 +41,10 @@ class SalePreviewService {
                 (await prisma.branch.findFirst({ where: { isHeadquarters: true } })) ||
                 (await prisma.branch.findFirst());
             if (defaultBranch) activeBranchId = defaultBranch.id;
+        } else {
+            const tenantId = require('../utils/async-context').getStore() || 'default';
+            const branchExists = await prisma.branch.findFirst({ where: { id: activeBranchId, tenantId } });
+            if (!branchExists) throw new Error("Sucursal no encontrada o acceso denegado");
         }
 
         if (!items || items.length === 0)

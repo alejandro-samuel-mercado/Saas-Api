@@ -391,6 +391,7 @@ class AuthService {
     return { 
         user: { 
             id: user.id, 
+            tenantId: user.tenantId,
             name: user.name, 
             email: user.email,
             role: { id: user.role.id, name: user.role.name }, 

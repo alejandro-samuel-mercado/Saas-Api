@@ -321,7 +321,11 @@ class SaaSService {
     async initializeTenant(tenantId, ownerPassword = 'admin123', rubroId = null) {
         // 1. StoreConfig
         await prisma.storeConfig.create({
-            data: { tenantId }
+            data: { 
+                tenantId,
+                enablePoints: false,
+                enablePointsRedemption: false
+            }
         });
 
         // 2. Roles

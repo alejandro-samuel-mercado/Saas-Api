@@ -5,7 +5,8 @@ class AdminProductService {
 
   async updateProduct(adminId, productId, data, ip) {
     
-      const product = await prisma.product.findUnique({ where: { id: parseInt(productId) } });
+      const tenantId = require('../utils/async-context').getStore();
+      const product = await prisma.product.findFirst({ where: { id: parseInt(productId), tenantId } });
       if (!product) throw new Error('Producto no encontrado');
 
       const updatedProduct = await prisma.product.update({

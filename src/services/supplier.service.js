@@ -106,6 +106,10 @@ class SupplierService {
 
   async addSku(supplierId, data) {
       const { skuId, supplierSkuCode, basePurchasePrice, currency, estimatedDeliveryDays } = data;
+      const tenantId = require('../utils/async-context').getStore();
+      
+      const supplier = await prisma.supplier.findFirst({ where: { id: parseInt(supplierId), tenantId } });
+      if (!supplier) throw new Error('Proveedor no encontrado o acceso denegado');
       
       const existing = await prisma.supplierSKU.findFirst({
           where: { supplierId_skuId: { supplierId: parseInt(supplierId), skuId: parseInt(skuId) } }
@@ -137,6 +141,10 @@ class SupplierService {
   }
 
   async removeSku(supplierId, skuId) {
+      const tenantId = require('../utils/async-context').getStore();
+      const supplier = await prisma.supplier.findFirst({ where: { id: parseInt(supplierId), tenantId } });
+      if (!supplier) throw new Error('Proveedor no encontrado o acceso denegado');
+
       return await prisma.supplierSKU.delete({
           where: { supplierId_skuId: { supplierId: parseInt(supplierId), skuId: parseInt(skuId) } }
       });

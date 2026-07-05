@@ -4,7 +4,8 @@ const AuditService = require('./audit.service');
 class AdminUserService {
 
   async verifyIdentity(adminId, userId, ip) {
-    const user = await prisma.user.findUnique({ where: { id: parseInt(userId) } });
+    const tenantId = require('../utils/async-context').getStore();
+    const user = await prisma.user.findFirst({ where: { id: parseInt(userId), tenantId } });
     if (!user) throw new Error('Usuario no encontrado');
 
     const updatedUser = await prisma.user.update({
@@ -27,7 +28,8 @@ class AdminUserService {
 
   async toggleUserStatus(adminId, userId, status, ip) {
       
-      const user = await prisma.user.findUnique({ where: { id: parseInt(userId) } });
+      const tenantId = require('../utils/async-context').getStore();
+      const user = await prisma.user.findFirst({ where: { id: parseInt(userId), tenantId } });
       if (!user) throw new Error('Usuario no encontrado');
 
       const updatedUser = await prisma.user.update({
@@ -56,7 +58,8 @@ class AdminUserService {
   }
 
   async adjustPoints(adminId, userId, amount, reason, ip) {
-      const user = await prisma.user.findUnique({ where: { id: parseInt(userId) } });
+      const tenantId = require('../utils/async-context').getStore();
+      const user = await prisma.user.findFirst({ where: { id: parseInt(userId), tenantId } });
       if (!user) throw new Error('Usuario no encontrado');
 
       const newTotal = Number(user.points) + amount;

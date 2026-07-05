@@ -330,12 +330,16 @@ class AdminSaleService {
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
+  
+    
+    const tenantId = require('../utils/async-context').getStore();
     const filter = { paymentStatus: 'PAID' };
+    if (tenantId) filter.tenantId = tenantId;
     
     if (branchId) {
-        filter.branchId = branchId;
+        filter.branchId = parseInt(branchId);
     } else if (branchIds && branchIds.length > 0) {
-        filter.branchId = { in: branchIds };
+        filter.branchId = { in: branchIds.map(id => parseInt(id)) };
     }
 
     switch (timeRange) {
@@ -462,11 +466,16 @@ class AdminSaleService {
     }));
 
     // 5. Productos más vendidos
+    const saleItemFilter = { ...filter };
+    if (tenantId) {
+        saleItemFilter.tenantId = tenantId;
+    }
+
     const topProductsRaw = await prisma.saleItem.groupBy({
       by: ['productName'],
       _sum: { quantity: true, subtotalInBaseCurrency: true },
       where: {
-          sale: filter
+          sale: saleItemFilter
       },
       orderBy: { _sum: { subtotalInBaseCurrency: 'desc' } },
       take: 5

@@ -78,6 +78,22 @@ const prisma = basePrisma.$extends({
           else if (['updateMany', 'deleteMany'].includes(operation)) {
             args.where = { ...args.where, tenantId };
           }
+          // Intercepción de operaciones únicas
+          else if (operation === 'findUnique') {
+             args.where = { ...args.where, tenantId };
+             const modelCamel = model.charAt(0).toLowerCase() + model.slice(1);
+             return basePrisma[modelCamel].findFirst(args);
+          }
+          else if (['update', 'delete'].includes(operation)) {
+             const modelCamel = model.charAt(0).toLowerCase() + model.slice(1);
+             const record = await basePrisma[modelCamel].findFirst({
+                 where: { ...args.where, tenantId }
+             });
+             if (!record) {
+                 throw new Error(`Acceso denegado o registro no encontrado en ${model}`);
+             }
+             // Si el registro pertenece al tenant, procedemos con la operación original
+          }
         }
         
         return query(args);

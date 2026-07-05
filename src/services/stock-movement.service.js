@@ -42,6 +42,11 @@ class StockMovementService {
       if (skuId) where.skuId = parseInt(skuId);
       if (type) where.type = type;
       
+      const tenantId = require('../utils/async-context').getStore();
+      if (tenantId) {
+          where.branch = { ...where.branch, tenantId };
+      }
+      
       if (startDate && endDate) {
           where.createdAt = {
               gte: new Date(startDate),

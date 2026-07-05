@@ -116,6 +116,10 @@ class SaleCreationService {
             if (!defaultBranch)
                 throw new Error("No hay sucursales configuradas en el sistema");
             activeBranchId = defaultBranch.id;
+        } else {
+            const tenantId = tenantContext.getStore() || 'default';
+            const branchExists = await prisma.branch.findFirst({ where: { id: activeBranchId, tenantId } });
+            if (!branchExists) throw new Error("Sucursal no encontrada o acceso denegado");
         }
 
         if (!items || items.length === 0)

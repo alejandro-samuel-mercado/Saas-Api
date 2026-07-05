@@ -188,6 +188,11 @@ class AdminStockController {
             if (status) where.status = status;
             if (saleId) where.saleId = parseInt(saleId);
 
+            const tenantId = require('../utils/async-context').getStore();
+            if (tenantId) {
+                where.sale = { ...where.sale, tenantId };
+            }
+
             const transactions = await prisma.paymentTransaction.findMany({
                 where,
                 include: {

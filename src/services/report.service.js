@@ -246,6 +246,11 @@ class ReportService {
       stock: { gt: 0 },
     };
     if (branchId && Number(branchId) > 0) where.branchId = Number(branchId);
+    
+    const tenantId = require('../utils/async-context').getStore();
+    if (tenantId) {
+        where.branch = { tenantId };
+    }
 
     const inventory = await prisma.branchInventory.findMany({
       where,
@@ -319,6 +324,11 @@ class ReportService {
       stock: { gt: 0 },
     };
     if (branchId && Number(branchId) > 0) where.branchId = Number(branchId);
+
+    const tenantId = require('../utils/async-context').getStore();
+    if (tenantId) {
+        where.branch = { tenantId };
+    }
 
     const inventory = await prisma.branchInventory.findMany({
       where,

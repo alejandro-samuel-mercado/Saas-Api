@@ -68,6 +68,10 @@ class ChatService {
    * Guardar mensajes en la bd
    */
   async addMessage(conversationId, sender, content) {
+    const tenantId = require('../utils/async-context').getStore() || 'default';
+    const conversation = await prisma.chatConversation.findFirst({ where: { id: conversationId, tenantId } });
+    if (!conversation) throw new Error("Conversación no encontrada");
+
     return await prisma.chatMessage.create({
       data: {
         conversationId,
@@ -147,9 +151,11 @@ class ChatService {
   }
 
   async markAsRead(id) {
+    const tenantId = require('../utils/async-context').getStore() || 'default';
     return await prisma.chatMessage.updateMany({
       where: { 
         conversationId: parseInt(id),
+        conversation: { tenantId },
         sender: 'USER',
         read: false
       },

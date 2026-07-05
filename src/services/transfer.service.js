@@ -30,6 +30,10 @@ class TransferService {
     const l = Math.max(1, parseInt(limit));
     const skip = (p - 1) * l;
     const where = {};
+    const tenantId = require('../utils/async-context').getStore();
+    if (tenantId) {
+        where.user = { tenantId };
+    }
     if (branchId) {
         where.branchId = parseInt(branchId);
     }
@@ -54,8 +58,12 @@ class TransferService {
    * Obtiene transferencias de un usuario
    */
   async getUserTransfers(userId) {
+    const tenantId = require('../utils/async-context').getStore();
     return await prisma.transfer.findMany({
-      where: { userId: parseInt(userId) },
+      where: { 
+          userId: parseInt(userId),
+          user: tenantId ? { tenantId } : undefined
+      },
       orderBy: { createdAt: 'desc' }
     });
   }
@@ -64,6 +72,15 @@ class TransferService {
    * Actualiza el estado de una transferencia
    */
   async updateStatus(id, status) {
+    const tenantId = require('../utils/async-context').getStore();
+    const transfer = await prisma.transfer.findFirst({
+        where: { 
+            id: parseInt(id),
+            user: tenantId ? { tenantId } : undefined
+        }
+    });
+    if (!transfer) throw new Error('Transferencia no encontrada o acceso denegado');
+
     return await prisma.transfer.update({
       where: { id: parseInt(id) },
       data: { status }

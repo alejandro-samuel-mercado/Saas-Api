@@ -22,8 +22,9 @@ class BranchService {
   }
 
   async findOne(id) {
-    return await prisma.branch.findUnique({
-      where: { id: parseInt(id) },
+    const tenantId = require('../utils/async-context').getStore();
+    return await prisma.branch.findFirst({
+      where: { id: parseInt(id), tenantId },
       include: {
         inventory: {
              select: { id: true }
@@ -34,7 +35,8 @@ class BranchService {
 
   async create(data) {
   // Validar código único
-  const existing = await prisma.branch.findUnique({ where: { code: data.code } });
+  const tenantId = require('../utils/async-context').getStore();
+  const existing = await prisma.branch.findFirst({ where: { code: data.code, tenantId } });
   if (existing) throw new Error('Ya existe una sucursal con este código');
 
   return await prisma.$transaction(async (tx) => {
@@ -102,11 +104,12 @@ class BranchService {
 }
 
   async update(id, data) {
-    const branch = await prisma.branch.findUnique({ where: { id: parseInt(id) } });
+    const tenantId = require('../utils/async-context').getStore();
+    const branch = await prisma.branch.findFirst({ where: { id: parseInt(id), tenantId } });
     if (!branch) throw new Error('Sucursal no encontrada');
 
     if (data.code && data.code !== branch.code) {
-         const existing = await prisma.branch.findUnique({ where: { code: data.code } });
+         const existing = await prisma.branch.findFirst({ where: { code: data.code, tenantId } });
          if (existing) throw new Error('Código en uso por otra sucursal');
     }
 
@@ -155,6 +158,11 @@ class BranchService {
 
   async delete(id) {
     const branchId = parseInt(id);
+    const tenantId = require('../utils/async-context').getStore();
+    
+    // Check ownership
+    const branch = await prisma.branch.findFirst({ where: { id: branchId, tenantId } });
+    if (!branch) throw new Error('Sucursal no encontrada');
     
     // Verificar restricciones
     // 1. VENTAS
@@ -223,7 +231,8 @@ class BranchService {
       const parsedBranchId = parseInt(branchId);
       const parsedUserId = parseInt(userId);
       
-      const user = await prisma.user.findUnique({ where: { id: parsedUserId }, include: { role: true } });
+      const tenantId = require('../utils/async-context').getStore();
+      const user = await prisma.user.findFirst({ where: { id: parsedUserId, tenantId }, include: { role: true } });
       if (!user) throw new Error('Usuario no encontrado');
 
       if (user.role.name === 'EMPLOYEE') {
@@ -278,7 +287,8 @@ class BranchService {
       const parsedBranchId = parseInt(branchId);
       const parsedUserId = parseInt(userId);
 
-      const user = await prisma.user.findUnique({ where: { id: parsedUserId }, include: { role: true } });
+      const tenantId = require('../utils/async-context').getStore();
+      const user = await prisma.user.findFirst({ where: { id: parsedUserId, tenantId }, include: { role: true } });
       if (!user) throw new Error('Usuario no encontrado');
 
       if (user.role.name === 'EMPLOYEE') {

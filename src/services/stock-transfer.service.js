@@ -14,6 +14,11 @@ class StockTransferService {
         { destinationBranchId: parseInt(branchId) }
       ];
     }
+    
+    const tenantId = require('../utils/async-context').getStore();
+    if (tenantId) {
+        where.originBranch = { tenantId };
+    }
 
     if (status) where.status = status;
     
@@ -43,8 +48,12 @@ class StockTransferService {
   }
 
   async getById(id) {
-    const transfer = await prisma.stockTransfer.findUnique({
-      where: { id: parseInt(id) },
+    const tenantId = require('../utils/async-context').getStore();
+    const transfer = await prisma.stockTransfer.findFirst({
+      where: { 
+          id: parseInt(id),
+          originBranch: tenantId ? { tenantId } : undefined
+      },
       include: {
         originBranch: true,
         destinationBranch: true,
@@ -59,7 +68,7 @@ class StockTransferService {
       }
     });
 
-    if (!transfer) throw new Error('Transferencia no encontrada');
+    if (!transfer) throw new Error('Transferencia no encontrada o acceso denegado');
     return transfer;
   }
 
@@ -133,11 +142,16 @@ class StockTransferService {
   }
 
   async shipTransfer(id, userId) {
+    const tenantId = require('../utils/async-context').getStore();
     return await prisma.$transaction(async (tx) => {
       const locked = await tx.$queryRaw`
-        SELECT * FROM "StockTransfer" WHERE id = ${parseInt(id)} FOR UPDATE
+        SELECT st.* FROM "StockTransfer" st
+        JOIN "Branch" b ON st."originBranchId" = b.id
+        WHERE st.id = ${parseInt(id)} 
+        AND b."tenantId" = ${tenantId} 
+        FOR UPDATE
       `;
-      if (!locked || locked.length === 0) throw new Error('Transferencia no encontrada');
+      if (!locked || locked.length === 0) throw new Error('Transferencia no encontrada o acceso denegado');
       const transferRow = locked[0];
       if (transferRow.status !== 'PENDING') throw new Error('La transferencia no está en estado PENDING');
 
@@ -195,11 +209,16 @@ class StockTransferService {
   }
 
   async receiveTransfer(id, userId) {
+    const tenantId = require('../utils/async-context').getStore();
     return await prisma.$transaction(async (tx) => {
       const locked = await tx.$queryRaw`
-        SELECT * FROM "StockTransfer" WHERE id = ${parseInt(id)} FOR UPDATE
+        SELECT st.* FROM "StockTransfer" st
+        JOIN "Branch" b ON st."originBranchId" = b.id
+        WHERE st.id = ${parseInt(id)} 
+        AND b."tenantId" = ${tenantId} 
+        FOR UPDATE
       `;
-      if (!locked || locked.length === 0) throw new Error('Transferencia no encontrada');
+      if (!locked || locked.length === 0) throw new Error('Transferencia no encontrada o acceso denegado');
       const transferRow = locked[0];
       if (transferRow.status !== 'IN_TRANSIT') throw new Error('La transferencia no está en estado IN_TRANSIT');
 
@@ -280,12 +299,41 @@ class StockTransferService {
     }, { maxWait: 20000, timeout: 20000 });
   }
 
+  async rejectTransfer(id, userId) {
+    const tenantId = require('../utils/async-context').getStore();
+    return await prisma.$transaction(async (tx) => {
+          const locked = await tx.$queryRaw`
+            SELECT st.* FROM "StockTransfer" st
+            JOIN "Branch" b ON st."originBranchId" = b.id
+            WHERE st.id = ${parseInt(id)} 
+            AND b."tenantId" = ${tenantId} 
+            FOR UPDATE
+          `;
+          if (!locked || locked.length === 0) throw new Error('Transferencia no encontrada o acceso denegado');
+          const transferRow = locked[0];
+          
+          if (transferRow.status === 'PENDING') {
+              return await tx.stockTransfer.update({
+                  where: { id: transferRow.id },
+                  data: { status: 'REJECTED' }
+              });
+          } else {
+              throw new Error('Solo se pueden rechazar transferencias en estado Pendiente.');
+          }
+      }, { maxWait: 20000, timeout: 20000 });
+  }
+
   async cancelTransfer(id, userId) {
+      const tenantId = require('../utils/async-context').getStore();
       return await prisma.$transaction(async (tx) => {
           const locked = await tx.$queryRaw`
-            SELECT * FROM "StockTransfer" WHERE id = ${parseInt(id)} FOR UPDATE
+            SELECT st.* FROM "StockTransfer" st
+            JOIN "Branch" b ON st."originBranchId" = b.id
+            WHERE st.id = ${parseInt(id)} 
+            AND b."tenantId" = ${tenantId} 
+            FOR UPDATE
           `;
-          if (!locked || locked.length === 0) throw new Error('Transferencia no encontrada');
+          if (!locked || locked.length === 0) throw new Error('Transferencia no encontrada o acceso denegado');
           const transferRow = locked[0];
           
           if (transferRow.status === 'PENDING') {

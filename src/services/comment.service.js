@@ -29,10 +29,12 @@ class CommentService {
    * Obtener comentarios aprobados de un producto
    */
   async getCommentsByProduct(productId) {
+    const tenantId = require('../utils/async-context').getStore() || 'default';
     return await prisma.comment.findMany({
       where: { 
           productId: parseInt(productId),
-          approved: true 
+          approved: true,
+          user: { tenantId }
       },
       include: { user: true },
       orderBy: { createdAt: 'desc' }
@@ -48,7 +50,8 @@ class CommentService {
       const l = Math.max(1, parseInt(limit));
       const skip = (p - 1) * l;
       
-      const where = {};
+      const tenantId = require('../utils/async-context').getStore() || 'default';
+      const where = { user: { tenantId } };
       if (search) {
           const searchTrim = search.trim();
           where.OR = [
@@ -76,6 +79,9 @@ class CommentService {
    * Aprobar/Rechazar comentario (Moderación)
    */
   async moderateComment(id, approved) {
+      const tenantId = require('../utils/async-context').getStore() || 'default';
+      const comment = await prisma.comment.findFirst({ where: { id: parseInt(id), user: { tenantId } } });
+      if (!comment) throw new Error("Comentario no encontrado");
       return await prisma.comment.update({
           where: { id: parseInt(id) },
           data: { approved: Boolean(approved) }
@@ -86,10 +92,12 @@ class CommentService {
    * Obtener testimonios para homepage (comentarios aprobados con buena calificación)
    */
   async getTestimonials(limit = 12) {
+    const tenantId = require('../utils/async-context').getStore() || 'default';
     return await prisma.comment.findMany({
       where: {
         approved: true,
-        rating: { gte: 4 }
+        rating: { gte: 4 },
+        user: { tenantId }
       },
       include: {
         user: {
@@ -113,12 +121,16 @@ class CommentService {
   }
 
   async deleteComment(id) {
+      const tenantId = require('../utils/async-context').getStore() || 'default';
+      const comment = await prisma.comment.findFirst({ where: { id: parseInt(id), user: { tenantId } } });
+      if (!comment) throw new Error("Comentario no encontrado");
       return await prisma.comment.delete({ where: { id: parseInt(id) } });
   }
 
   async getCommentsByUser(userId) {
+      const tenantId = require('../utils/async-context').getStore() || 'default';
       return await prisma.comment.findMany({
-          where: { userId: parseInt(userId) },
+          where: { userId: parseInt(userId), user: { tenantId } },
           include: { product: true },
           orderBy: { createdAt: 'desc' }
       });
