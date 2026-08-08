@@ -261,10 +261,33 @@ class SaaSService {
                 }
 
                 if (Object.keys(updateUserData).length > 0) {
-                    await prisma.user.updateMany({
-                        where: { tenantId: id, roleId: superAdminRole.id },
-                        data: updateUserData
-                    });
+                    try {
+                        const ownerUser = await prisma.user.findFirst({
+                            where: { tenantId: id, roleId: superAdminRole.id, email: existingTenant.ownerEmail }
+                        });
+                        
+                        if (ownerUser) {
+                            await prisma.user.update({
+                                where: { id: ownerUser.id },
+                                data: updateUserData
+                            });
+                        } else {
+                            const superAdmins = await prisma.user.findMany({
+                                where: { tenantId: id, roleId: superAdminRole.id }
+                            });
+                            if (superAdmins.length === 1) {
+                                await prisma.user.update({
+                                    where: { id: superAdmins[0].id },
+                                    data: updateUserData
+                                });
+                            }
+                        }
+                    } catch (err) {
+                        if (err.code === 'P2002') {
+                            throw { statusCode: 400, message: 'El nuevo correo electrónico ya está en uso por otro usuario en este negocio.' };
+                        }
+                        throw err;
+                    }
                 }
             }
         }
