@@ -166,7 +166,7 @@ class SaaSService {
                 name: data.name,
                 slug,
                 ownerName: data.ownerName,
-                ownerEmail: data.ownerEmail,
+                ownerEmail: data.ownerEmail ? data.ownerEmail.toLowerCase().trim() : data.ownerEmail,
                 ownerPhone: data.ownerPhone || null,
                 domain: data.domain || null,
                 planId: data.planId || null,
@@ -195,7 +195,7 @@ class SaaSService {
         let updateData = {
             name: data.name,
             ownerName: data.ownerName,
-            ownerEmail: data.ownerEmail,
+            ownerEmail: data.ownerEmail ? data.ownerEmail.toLowerCase().trim() : data.ownerEmail,
             ownerPhone: data.ownerPhone,
             domain: data.domain,
             subscriptionEnd: data.subscriptionEnd,
@@ -254,7 +254,7 @@ class SaaSService {
                     updateUserData.password = await bcrypt.hash(data.ownerPassword, 10);
                 }
                 if (data.ownerEmail) {
-                    updateUserData.email = data.ownerEmail;
+                    updateUserData.email = data.ownerEmail.toLowerCase().trim();
                 }
                 if (data.ownerName) {
                     updateUserData.name = data.ownerName;
