@@ -89,7 +89,11 @@ class PurchaseService {
    * Crea una nueva orden de compra (Borrador).
    */
   async create(data, userId) {
-      const { branchId, supplierId, items, notes, deliveryDate, currencyCode: requestedCurrency } = data;
+      const { 
+          branchId, supplierId, items, notes, deliveryDate, currencyCode: requestedCurrency,
+          shippingCost = 0, additionalCost = 0, invoiceCost = 0, 
+          utilityPercentage, isCredit = false, installmentsCount = 1, installments = []
+      } = data;
       
       const tenantId = tenantContext.getStore() || 'default';
       const storeConfig = await prisma.storeConfig.findFirst({ where: { tenantId } });
@@ -104,8 +108,8 @@ class PurchaseService {
       
       let activeBranchId = Number(branchId);
       if (!(activeBranchId > 0)) {
-          const defaultBranch = await prisma.branch.findFirst({ where: { isHeadquarters: true } }) 
-                         || await prisma.branch.findFirst();
+          const defaultBranch = await prisma.branch.findFirst({ where: { isHeadquarters: true, tenantId } }) 
+                         || await prisma.branch.findFirst({ where: { tenantId }});
           if (!defaultBranch) throw new Error('No hay sucursales configuradas en el sistema');
           activeBranchId = defaultBranch.id;
       }
@@ -117,15 +121,24 @@ class PurchaseService {
           estimatedTotal += (item.quantity * item.unitPrice);
       }
 
+      const realTotalCost = estimatedTotal + Number(shippingCost) + Number(additionalCost) + Number(invoiceCost);
+
       const purchase = await prisma.purchase.create({
           data: {
               branchId: activeBranchId,
-              supplierId: parseInt(supplierId),
+              supplierId: supplierId ? parseInt(supplierId) : null,
               userId,
               status: 'DRAFT',
               notes,
               deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
               estimatedTotal,
+              shippingCost,
+              additionalCost,
+              invoiceCost,
+              realTotalCost,
+              utilityPercentage: utilityPercentage ? Number(utilityPercentage) : null,
+              isCredit,
+              installmentsCount: Number(installmentsCount),
               currencyCode: activeCurrencyCode,
               exchangeRateAtPurchase,
               totalInBaseCurrency: estimatedTotal / exchangeRateAtPurchase,
@@ -137,9 +150,37 @@ class PurchaseService {
                       unitPrice: item.unitPrice,
                       subtotal: item.quantity * item.unitPrice
                   }))
-              }
+              },
+              installments: isCredit && installments.length > 0 ? {
+                  create: installments.map(inst => ({
+                      amount: inst.amount,
+                      dueDate: new Date(inst.dueDate),
+                      status: 'PENDING',
+                      tenantId
+                  }))
+              } : undefined,
+              tenantId
           }
       });
+
+      // Auto-assign products to supplier if missing
+      if (supplierId) {
+          for (const item of items) {
+              const existingSku = await prisma.supplierSKU.findFirst({
+                  where: { supplierId: parseInt(supplierId), skuId: parseInt(item.skuId) }
+              });
+              if (!existingSku) {
+                  await prisma.supplierSKU.create({
+                      data: {
+                          supplierId: parseInt(supplierId),
+                          skuId: parseInt(item.skuId),
+                          basePurchasePrice: item.unitPrice,
+                          currency: activeCurrencyCode
+                      }
+                  });
+              }
+          }
+      }
 
       await AuditService.logAction({
           adminId: userId,

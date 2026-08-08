@@ -1004,18 +1004,18 @@ model Tenant {
 }
 
 model Rubro {
-  id                Int       @id @default(autoincrement())
-  slug              String    @unique
+  id                Int      @id @default(autoincrement())
+  slug              String   @unique
   name              String
-  icon              String?   @default("store")
-  disabledModules   String[]  @default([])
-  cartEnabled       Boolean   @default(true)
-  posEnabled        Boolean   @default(true)
-  storefrontLayout  String    @default("standard")
+  icon              String?  @default("store")
+  disabledModules   String[] @default([])
+  cartEnabled       Boolean  @default(true)
+  posEnabled        Boolean  @default(true)
+  storefrontLayout  String   @default("standard")
   productFormConfig Json?
-  isActive          Boolean   @default(true)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
   tenants           Tenant[]
 }
 
@@ -1028,6 +1028,7 @@ model SaaSPlan {
   allowCustomDomain Boolean  @default(false)
   allowInvoicing    Boolean  @default(false)
   allowPOS          Boolean  @default(false)
+  allowPointsSystem Boolean  @default(false)
   enabledModules    String[] @default(["products", "sales", "categories", "settings"])
   description       String?
   isActive          Boolean  @default(true)

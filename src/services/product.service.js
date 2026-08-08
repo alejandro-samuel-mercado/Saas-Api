@@ -61,7 +61,10 @@ class ProductService {
             youtubeVideo,
             nutritionalInfo,
             octagonsImage,
-            taxRate
+            taxRate,
+            barcode,
+            barcodeType,
+            supplierId,
         } = data;
         // Normalización: alias 'skus' para 'variants'
         const finalVariants = variants || skus || [];
@@ -121,7 +124,9 @@ class ProductService {
                 const sku = await tx.sKU.create({
                     data: {
                         productId: product.id,
-                        code: `${product.id}-DEFAULT`,
+                        code: data.code || `${product.id}-DEFAULT`,
+                        barcode: barcode || null,
+                        barcodeType: barcodeType || 'INTERNO',
                         price: basePrice,
                         costPrice: data.costPrice || 0,
                         stock: data.stockInicial || 0,
@@ -159,6 +164,20 @@ class ProductService {
                     }
 
                     createdSkus.push(newSku);
+                }
+            }
+
+            // Asignar proveedor si se proporciona
+            if (supplierId) {
+                for (const sku of createdSkus) {
+                    await tx.supplierSKU.create({
+                        data: {
+                            supplierId: parseInt(supplierId),
+                            skuId: sku.id,
+                            basePurchasePrice: sku.costPrice || 0,
+                            currency: 'USD'
+                        }
+                    });
                 }
             }
 
@@ -753,6 +772,40 @@ class ProductService {
                         branchId: data.branchId || null,
                         changes,
                         ip: data.ip
+                    });
+                }
+            }
+
+            // Administrar asociación de proveedor si se proporciona
+            if (data.supplierId) {
+                const skus = await tx.sKU.findMany({ where: { productId: parseInt(id) } });
+                for (const sku of skus) {
+                    const existing = await tx.supplierSKU.findFirst({
+                        where: { supplierId: parseInt(data.supplierId), skuId: sku.id }
+                    });
+                    if (!existing) {
+                        await tx.supplierSKU.create({
+                            data: {
+                                supplierId: parseInt(data.supplierId),
+                                skuId: sku.id,
+                                basePurchasePrice: sku.costPrice || 0,
+                                currency: 'USD'
+                            }
+                        });
+                    }
+                }
+            }
+
+            // Actualizar barcode en el SKU por defecto si es producto simple
+            if (data.barcode !== undefined) {
+                const skus = await tx.sKU.findMany({ where: { productId: parseInt(id) } });
+                if (skus.length === 1) {
+                    await tx.sKU.update({
+                        where: { id: skus[0].id },
+                        data: {
+                            barcode: data.barcode === "" ? null : data.barcode,
+                            barcodeType: data.barcodeType || skus[0].barcodeType
+                        }
                     });
                 }
             }
