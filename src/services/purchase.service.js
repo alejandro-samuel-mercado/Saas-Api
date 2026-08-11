@@ -192,6 +192,36 @@ class PurchaseService {
           ip: data.ip
       });
 
+      if (data.isDirectPurchase === 'true' || data.isDirectPurchase === true) {
+          // Confirmar automáticamente
+          await this.confirm(purchase.id, userId, data.ip);
+
+          // Si no es a crédito, registrar el pago para poder recibirla
+          if (!isCredit && data.paymentMethod) {
+              await prisma.supplierPayment.create({
+                  data: {
+                      supplierId: supplierId ? parseInt(supplierId) : null,
+                      purchaseId: purchase.id,
+                      amount: realTotalCost,
+                      method: data.paymentMethod,
+                      paymentDate: new Date(),
+                      reference: `Pago automático Compra Directa #${purchase.id}`,
+                      createdBy: userId,
+                      tenantId,
+                      currencyCode: activeCurrencyCode,
+                      exchangeRateAtPurchase,
+                      amountInBaseCurrency: realTotalCost / exchangeRateAtPurchase
+                  }
+              });
+          }
+
+          // Recibir automáticamente (actualiza stock)
+          await this.receive(purchase.id, userId, data.ip);
+
+          // Retornar la compra actualizada
+          return await this.getById(purchase.id);
+      }
+
       return purchase;
   }
 
@@ -235,8 +265,8 @@ class PurchaseService {
               throw new Error('La orden debe estar en estado BORRADOR o CONFIRMADA para ser recibida');
           }
           
-          if (!purchase.payment) {
-              throw new Error('La orden debe estar PAGADA para poder recibir la mercadería');
+          if (!purchase.payment && !purchase.isCredit) {
+              throw new Error('La orden debe estar PAGADA o a CRÉDITO para poder recibir la mercadería');
           }
           
           for (const item of purchase.items) {
