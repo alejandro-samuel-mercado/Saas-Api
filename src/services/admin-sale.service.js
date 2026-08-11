@@ -465,7 +465,7 @@ class AdminSaleService {
       count: pm._count.id
     }));
 
-    // 5. Productos más vendidos
+    // 5. Productos Tendencias
     const saleItemFilter = { ...filter };
     if (tenantId) {
         saleItemFilter.tenantId = tenantId;
